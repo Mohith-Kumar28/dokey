@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { UserAvatarProfile } from '@/components/user-avatar-profile';
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { SignOutButton, useUser } from '@/auth/client';
 import { useRouter } from 'next/navigation';
 export function UserNav() {
   const { user } = useUser();

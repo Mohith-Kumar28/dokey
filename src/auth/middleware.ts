@@ -1,0 +1,1 @@
+export { clerkMiddleware, createRouteMatcher } from './adapters/clerk/middleware';
