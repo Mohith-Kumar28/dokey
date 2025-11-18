@@ -1,1 +1,8 @@
-export { auth, getSession, requireAuth, hasRole, hasPermission } from './adapters/clerk/server';
+export {
+  auth,
+  getSession,
+  requireAuth,
+  hasRole,
+  hasPermission,
+  getUser
+} from './adapters/clerk/server';

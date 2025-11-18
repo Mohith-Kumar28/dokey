@@ -1,8 +1,8 @@
 ## Summary
-Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage, and an auth layer that internally uses Clerk Organizations/Roles/Permissions while isolating Clerk from app code. Design all major tools (editor, viewer, variables panel, approvals UI, redline diff, comments) as reusable, pluggable components and services. 
+Build a full document platform on Next.js + shadcn/ui, Postgres via Prisma ORM, and an auth layer that internally uses Clerk Organizations/Roles/Permissions while isolating Clerk from app code. Use TanStack Query for client-side server state. Design all major tools (editor, viewer, variables panel, approvals UI, redline diff, comments) as reusable, pluggable components and services.
 
 ## Doc Access Policy (MCP)
-- Context7 MCP: Always use to fetch and reference official docs (e.g., Next.js App Router, Supabase, Clerk, Resend/SES, PDF generation). Resolve library ID first, then pull focused topics.
+- Context7 MCP: Always use to fetch and reference official docs (Next.js App Router, Prisma, Clerk, TanStack Query, Resend/SES, PDF generation). Resolve library ID first, then pull focused topics.
 - shadcn MCP: Always use for component documentation, examples, and CLI add commands; audit checklists after adding components.
 - Integrate these MCP calls into development and verification steps for accuracy and up‑to‑date guidance.
 
@@ -14,7 +14,7 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
   - `adapters/clerk/*`: only place importing `@clerk/*`; maps our interface to Clerk orgs/roles/permissions.
 - Middleware: `src/auth/middleware.ts` consumed by `src/middleware.ts` for route protection and role/permission gating.
 - Providers: Replace `ClerkProvider` in `src/components/layout/providers.tsx` with `AuthProvider` while keeping theme appearance (dark/light).
-- Data linkage: Supabase records store Clerk `org_id`/`user_id`; RBAC enforced via adapter at runtime.
+- Data linkage: Prisma records store Clerk `orgId`/`userId`; RBAC enforced via adapter at runtime.
 
 ## Reusable Tools & Pluginability
 - Component-first APIs: All tools expose stable props/events and can be reused across features.
@@ -37,7 +37,7 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
 - Custom Branding:
   - `branding` table (logo/fonts/colors), applied to Viewer/export.
 - File Uploads:
-  - Supabase Storage buckets (`org-files`,`doc-uploads`); embed PDFs/DOCX/Sheets; server‑side preview thumbnails.
+  - Storage adapter abstraction (e.g., S3/R2). Embed PDFs/DOCX/Sheets; server‑side preview thumbnails.
 - Conditional Logic:
   - Block `visible_if` via rule builder; shared evaluator for preview/render.
 - Data Merge / Variables:
@@ -50,7 +50,7 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
 - Redlining:
   - Text block diffs stored in `redlines`; show/hide; accept/reject with audit events.
 - Comments:
-  - `comments` (doc/block); @mentions via org users; real-time with Supabase Realtime.
+  - `comments` (doc/block); @mentions via org users; real-time via a provider adapter (e.g., Ably/Pusher/WebSockets).
 - Content Locking:
   - `locks` mapping blocks→role keys; editor disables for non-authorized roles.
 - Workspaces:
@@ -88,19 +88,16 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
 - Engagement Feed:
   - Timeline per document/session.
 - Audit Trail:
-  - Immutable events across lifecycle; appended to certificate and stored in Postgres.
+  - Immutable events across lifecycle; appended to certificate and stored in Postgres via Prisma.
 
-## Supabase Integration
-- Postgres:
-  - Migrations for `documents`, `templates`, `content_blocks`, `branding`, `workflows`, `workflow_steps`, `comments`, `redlines`, `locks`, `signing_sessions`, `signers`, `signature_events`, `analytics_events`.
-  - Typed query layer in `src/server/db/*`; server actions only access DB.
-- Storage:
-  - Buckets with signed URLs; server proxies for protected files.
-- Realtime:
-  - Channels for comments and presence.
+## Data Layer (Prisma)
+- Prisma schema and migrations for `documents`, `templates`, `content_blocks`, `branding`, `workflows`, `workflow_steps`, `comments`, `redlines`, `locks`, `signing_sessions`, `signers`, `signature_events`, `analytics_events`.
+- Client singleton at `src/server/db/prisma.ts` and typed query helpers; server actions only access DB.
+- Storage handled via adapter (e.g., S3/R2) with signed URLs and server proxies for protected files.
 
 ## Refactors
 - `src/components/layout/providers.tsx`: replace `ClerkProvider` with `AuthProvider` preserving theme.
+- `src/components/layout/providers.tsx`: add TanStack Query `QueryClientProvider` with sensible defaults.
 - `src/middleware.ts`: delegate protection/role gates to `auth/middleware`.
 - `src/app/auth/*` and `src/features/auth/*`: use `Auth.SignIn`/`Auth.SignUp` wrappers.
 - Remove direct `@clerk/*` imports outside `src/auth/*`.
@@ -108,8 +105,8 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
 ## Milestones
 1) Auth Layer & Refactor
 - Clerk adapter behind auth; providers/middleware/auth views refactored; role/permission checks via auth layer; app compiles.
-2) Supabase Bootstrap & Repos
-- Migrations; repositories/services; CRUD UIs for templates/content/branding; storage buckets.
+2) Prisma Bootstrap & Repos
+- Schema/migrations; repositories/services; CRUD UIs for templates/content/branding; storage adapter.
 3) Editor & Variables/Logic
 - DnD editor; variables panel; conditional visibility; content library insert; custom block upload.
 4) Collaboration & Workflows
@@ -120,7 +117,7 @@ Build a full document platform on Next.js + shadcn/ui, Supabase Postgres/Storage
 - Event capture; dashboards; full audit trail attached to final PDFs.
 
 ## Verification & Docs
-- Use Context7 MCP for official docs per milestone (Next.js server actions, middleware, Supabase, Clerk org/roles APIs, Resend/SES, PDF generation).
+- Use Context7 MCP for official docs per milestone (Next.js server actions, middleware, Prisma, Clerk org/roles APIs, TanStack Query, Resend/SES, PDF generation).
 - Use shadcn MCP for component docs, examples, add commands, and audit checklists.
 - Add tests and manual checks each milestone; verify role gates and org scoping.
 

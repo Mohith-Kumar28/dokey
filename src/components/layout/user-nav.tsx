@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { UserAvatarProfile } from '@/components/user-avatar-profile';
-import { SignOutButton, useUser } from '@/auth/client';
+import { useUser, useSignOut } from '@/auth/client';
+import { IconLogout } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 export function UserNav() {
   const { user } = useUser();
+  const signOut = useSignOut();
   const router = useRouter();
   if (user) {
     return (
@@ -49,8 +51,11 @@ export function UserNav() {
             <DropdownMenuItem>New Team</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <SignOutButton redirectUrl='/auth/sign-in' />
+          <DropdownMenuItem
+            onSelect={() => signOut({ redirectUrl: '/auth/sign-in' })}
+          >
+            <IconLogout className='mr-2 h-4 w-4' />
+            Log out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

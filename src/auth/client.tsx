@@ -10,7 +10,13 @@ import {
   clerkUseOrganization
 } from './adapters/clerk/client';
 
-export function AuthProvider({ isDark, children }: { isDark?: boolean; children: React.ReactNode }) {
+export function AuthProvider({
+  isDark,
+  children
+}: {
+  isDark?: boolean;
+  children: React.ReactNode;
+}) {
   return <ClerkAuthProvider isDark={isDark}>{children}</ClerkAuthProvider>;
 }
 
@@ -40,4 +46,9 @@ export function useAuth() {
 
 export function useOrganization() {
   return clerkUseOrganization();
+}
+
+export function useSignOut() {
+  const { signOut } = clerkUseAuth();
+  return signOut;
 }
