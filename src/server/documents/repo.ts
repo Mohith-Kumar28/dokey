@@ -52,3 +52,21 @@ export async function deleteDocument(orgId: string, id: string) {
   await prisma.document.delete({ where: { id } });
   return { id };
 }
+
+export async function listDocumentsPaged(
+  orgId: string,
+  opts: { page: number; limit: number; search?: string; status?: string }
+) {
+  const where: any = { orgId };
+  if (opts.search) where.title = { contains: opts.search, mode: 'insensitive' };
+  if (opts.status) where.status = opts.status;
+  const total = await prisma.document.count({ where });
+  const items = await prisma.document.findMany({
+    where,
+    orderBy: { updatedAt: 'desc' },
+    skip: (opts.page - 1) * opts.limit,
+    take: opts.limit,
+    select: { id: true, title: true, status: true, updatedAt: true }
+  });
+  return { items, total };
+}

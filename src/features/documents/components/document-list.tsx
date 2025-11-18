@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { IconTrash, IconEdit } from '@tabler/icons-react';
+import Link from 'next/link';
 
 type Doc = { id: string; title: string; status: string };
 
@@ -94,7 +95,12 @@ export function DocumentList() {
                   key={d.id}
                   className='flex items-center justify-between gap-2'
                 >
-                  <span className='truncate'>{d.title}</span>
+                  <Link
+                    href={`/dashboard/document/${d.id}`}
+                    className='truncate hover:underline'
+                  >
+                    {d.title}
+                  </Link>
                   <div className='flex items-center gap-2'>
                     <span className='text-xs'>{d.status}</span>
                     <Button

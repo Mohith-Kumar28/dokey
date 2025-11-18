@@ -10,33 +10,41 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const { userId } = await auth();
-  const session = await getSession();
-  if (!userId)
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
-  const items = await listDocuments(orgScope);
-  return NextResponse.json(items);
+  try {
+    const { userId } = await auth();
+    const session = await getSession();
+    if (!userId)
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
+    const items = await listDocuments(orgScope);
+    return NextResponse.json(items);
+  } catch (e) {
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  const session = await getSession();
-  if (!userId)
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const body = await req.json();
-  const parsed = createSchema.safeParse(body);
-  if (!parsed.success)
-    return NextResponse.json({ error: 'invalid' }, { status: 400 });
-  const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
-  const ownerId = await ensureCurrentUser();
-  if (!ownerId)
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const created = await createDocument({
-    orgId: orgScope,
-    ownerId,
-    title: parsed.data.title,
-    docJson: parsed.data.docJson
-  });
-  return NextResponse.json(created, { status: 201 });
+  try {
+    const { userId } = await auth();
+    const session = await getSession();
+    if (!userId)
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    const body = await req.json().catch(() => null);
+    const parsed = createSchema.safeParse(body);
+    if (!parsed.success)
+      return NextResponse.json({ error: 'invalid' }, { status: 400 });
+    const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
+    const ownerId = await ensureCurrentUser();
+    if (!ownerId)
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    const created = await createDocument({
+      orgId: orgScope,
+      ownerId,
+      title: parsed.data.title,
+      docJson: parsed.data.docJson
+    });
+    return NextResponse.json(created, { status: 201 });
+  } catch (e) {
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
 }
