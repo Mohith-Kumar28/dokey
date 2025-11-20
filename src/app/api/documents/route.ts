@@ -4,9 +4,12 @@ import { listDocuments, createDocument } from '@/server/documents/repo';
 import { ensureCurrentUser } from '@/server/users/repo';
 import { z } from 'zod';
 
+import { prisma } from '@/server/db/prisma';
+
 const createSchema = z.object({
   title: z.string().min(1),
-  docJson: z.any().optional()
+  docJson: z.any().optional(),
+  templateId: z.string().optional()
 });
 
 export async function GET() {
@@ -37,11 +40,23 @@ export async function POST(req: Request) {
     const ownerId = await ensureCurrentUser();
     if (!ownerId)
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+    let initialDocJson = parsed.data.docJson;
+
+    if (parsed.data.templateId) {
+      const template = await prisma.template.findUnique({
+        where: { id: parsed.data.templateId }
+      });
+      if (template) {
+        initialDocJson = template.docJson;
+      }
+    }
+
     const created = await createDocument({
       orgId: orgScope,
       ownerId,
       title: parsed.data.title,
-      docJson: parsed.data.docJson
+      docJson: initialDocJson
     });
     return NextResponse.json(created, { status: 201 });
   } catch (e) {

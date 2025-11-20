@@ -14,11 +14,62 @@ model Document {
   owner      User     @relation(fields: [ownerId], references: [id])
   title      String
   status     String   @default("draft")
-  docJson    Json
+  docJson    Json?
+  pdfUrl     String?  // URL to original PDF
+  pdfPath    String?  // Storage path for PDF
+  pageCount  Int      @default(1)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   comments   Comment[]
   redlines   Redline[]
+  recipients Recipient[]
+  pages      DocumentPage[]
+}
+
+model Recipient {
+  id             String   @id @default(cuid())
+  docId          String
+  document       Document @relation(fields: [docId], references: [id])
+  email          String
+  name           String
+  role           String   @default("signer") // e.g. Sender, Client, Approver
+  color          String   @default("#3b82f6") // Color for UI identification
+  deliveryMethod String   @default("email") // Email, SMS, Link
+  createdAt      DateTime @default(now())
+  fields         Field[]
+}
+
+model DocumentPage {
+  id         String   @id @default(cuid())
+  docId      String
+  document   Document @relation(fields: [docId], references: [id], onDelete: Cascade)
+  pageNumber Int
+  imageUrl   String   // URL to page image
+  width      Float
+  height     Float
+  fields     Field[]
+  createdAt  DateTime @default(now())
+
+  @@unique([docId, pageNumber])
+}
+
+model Field {
+  id          String        @id @default(cuid())
+  pageId      String
+  page        DocumentPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  recipientId String?
+  recipient   Recipient?    @relation(fields: [recipientId], references: [id])
+  type        String        // text, signature, date, checkbox, etc.
+  x           Float         // Position X
+  y           Float         // Position Y
+  width       Float
+  height      Float
+  required    Boolean       @default(false)
+  label       String?
+  value       String?
+  properties  Json?         // Custom properties per field type
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model Template {

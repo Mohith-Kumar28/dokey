@@ -5,9 +5,9 @@ import { useDataTable } from '@/hooks/use-data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import { Button } from '@/components/ui/button';
-import { useCreateDocument } from '@/features/documents/queries';
-import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/icons';
+import { useState } from 'react';
+import { DocumentCreationWizard } from '@/features/documents/components/wizard/document-creation-wizard';
 
 interface DocumentTableParams<TData, TValue> {
   data: TData[];
@@ -29,24 +29,20 @@ export function DocumentTable<TData, TValue>({
     shallow: false,
     debounceMs: 500
   });
-  const createMutation = useCreateDocument();
-  const router = useRouter();
+
+  const [wizardOpen, setWizardOpen] = useState(false);
+
   return (
-    <DataTable table={table}>
-      <DataTableToolbar table={table}>
-        <Button
-          size='sm'
-          disabled={createMutation.isPending}
-          onClick={async () => {
-            const doc = await createMutation.mutateAsync({
-              title: 'Untitled Document'
-            });
-            router.push(`/dashboard/document/${doc.id}`);
-          }}
-        >
-          <Icons.add /> Create Document
-        </Button>
-      </DataTableToolbar>
-    </DataTable>
+    <>
+      <DataTable table={table}>
+        <DataTableToolbar table={table}>
+          <Button size='sm' onClick={() => setWizardOpen(true)}>
+            <Icons.add /> Create Document
+          </Button>
+        </DataTableToolbar>
+      </DataTable>
+
+      <DocumentCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+    </>
   );
 }

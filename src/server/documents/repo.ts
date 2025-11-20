@@ -9,7 +9,20 @@ export async function listDocuments(orgId: string) {
 }
 
 export async function getDocument(orgId: string, id: string) {
-  return prisma.document.findFirst({ where: { id, orgId } });
+  return prisma.document.findFirst({
+    where: { id, orgId },
+    include: {
+      pages: {
+        include: {
+          fields: true
+        },
+        orderBy: {
+          pageNumber: 'asc'
+        }
+      },
+      recipients: true
+    }
+  });
 }
 
 export async function createDocument(params: {

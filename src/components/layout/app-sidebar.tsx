@@ -88,7 +88,9 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+              const Icon =
+                (item.icon && Icons[item.icon as keyof typeof Icons]) ||
+                Icons.page;
               return item?.items && item?.items?.length > 0 ? (
                 <Collapsible
                   key={item.title}
