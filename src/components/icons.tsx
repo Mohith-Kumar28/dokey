@@ -38,6 +38,10 @@ import {
   IconPrinter,
   IconPhoto,
   IconDeviceFloppy,
+  IconBriefcase,
+  IconUserPin,
+  IconLogin2,
+  IconLayoutKanban,
   IconProps
 } from '@tabler/icons-react';
 
@@ -82,5 +86,9 @@ export const Icons = {
   user: IconUser,
   users: IconUsers,
   warning: IconAlertCircle,
-  workspace: IconBriefcase2
+  workspace: IconBriefcase2,
+  briefcase: IconBriefcase,
+  userPen: IconUserPin,
+  login: IconLogin2,
+  kanban: IconLayoutKanban
 };
