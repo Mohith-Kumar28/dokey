@@ -13,7 +13,7 @@ const updateSchema = z.object({
   docJson: z.any().optional()
 });
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, { params }: Params) {
   try {
@@ -22,7 +22,8 @@ export async function GET(_req: Request, { params }: Params) {
     if (!userId)
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
-    const doc = await getDocument(orgScope, params.id);
+    const { id } = await params;
+    const doc = await getDocument(orgScope, id);
     if (!doc) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json(doc);
   } catch (e) {
@@ -41,9 +42,10 @@ export async function PUT(req: Request, { params }: Params) {
     if (!parsed.success)
       return NextResponse.json({ error: 'invalid' }, { status: 400 });
     const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
+    const { id } = await params;
     const updated = await updateDocument({
       orgId: orgScope,
-      id: params.id,
+      id: id,
       ...parsed.data
     });
     return NextResponse.json(updated);
@@ -59,7 +61,8 @@ export async function DELETE(_req: Request, { params }: Params) {
     if (!userId)
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     const orgScope = (session.orgId as string | null) ?? `user:${userId}`;
-    const res = await deleteDocument(orgScope, params.id);
+    const { id } = await params;
+    const res = await deleteDocument(orgScope, id);
     if (!res) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json(res);
   } catch (e) {

@@ -23,7 +23,6 @@ export default async function Page(props: PageProps) {
           <DataTableSkeleton columnCount={3} rowCount={8} filterCount={2} />
         }
       >
-        {/* @ts-expect-error RSC */}
         <DocumentListingPage />
       </Suspense>
     </PageContainer>
