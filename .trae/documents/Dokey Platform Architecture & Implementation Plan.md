@@ -1,5 +1,5 @@
 ## Summary
-Build a full document platform on Next.js + shadcn/ui, Postgres via Prisma ORM, and an auth layer that internally uses Clerk Organizations/Roles/Permissions while isolating Clerk from app code. Use TanStack Query (with Axios) for client-side server state. Design all major tools (editor, viewer, variables panel, approvals UI, redline diff, comments) as reusable, pluggable components and services. The Document Editor/Viewer is the core experience: replicate PandaDoc-level functionality with a block palette, fillable fields, recipient assignment, send flows, and robust page/canvas tooling—implemented with shadcn components, not custom-styled elements.
+Build a full document platform on Next.js + shadcn/ui, Postgres via Prisma ORM, and an auth layer that internally uses Clerk Organizations/Roles/Permissions while isolating Clerk from app code. Use TanStack Query (with Axios) for client-side server state. Design all major tools (editor, viewer, variables panel, approvals UI, redline diff, comments) as reusable, pluggable components and services.
 
 ## Doc Access Policy (MCP)
 - Context7 MCP: Always use to fetch and reference official docs (Next.js App Router, Prisma, Clerk, TanStack Query, Resend/SES, PDF generation). Resolve library ID first, then pull focused topics.
@@ -43,6 +43,52 @@ Build a full document platform on Next.js + shadcn/ui, Postgres via Prisma ORM, 
 - Data Merge / Variables:
   - Variables panel with `{{client.name}}`, `{{deal.value}}`; bindings resolved at render/send.
   - CRM adapters under `src/server/integrations/*` (start with CSV/manual; add HubSpot/Salesforce later).
+
+## Document Creation Wizard (3 Steps)
+- Step 1 — Get Started
+  - Options: Start from Template (library grid + search), Upload File (local/Drive/Dropbox/OneDrive), or Blank Document.
+  - Components: shadcn Tabs, Card grid, Input for search, file uploader (reuse `src/components/file-uploader.tsx`).
+  - Flow: Selecting a template clones into a draft; uploading creates a draft and queues preview generation; blank creates an empty draft.
+- Step 2 — Add Recipients
+  - Fields: Document name, recipient list with role tags (Sender/Client/Approver), delivery method (Email/SMS/Link).
+  - Components: shadcn Form, Combobox (org users via Clerk), Badge for role labels, segmented controls for delivery type.
+  - Flow: Persist draft, upsert recipients; pre-assign fillable fields by role where applicable.
+- Step 3 — Review Content
+  - Opens editor with header actions (Undo/Redo, Invite, Send menu, document menu for properties/duplicate/merge/add to content library/delete).
+  - Page ops: add, duplicate, delete, merge, reorder; breadcrumbs and page count.
+  - Right sidebar: Fillable fields (Text field, Signature, Initials, Date, Checkbox, Radio, Dropdown, Billing details, Stamp) and Blocks (Text, Image, Video, Table, Pricing table, Quote builder, Page break, Table of contents).
+  - Inline assignment toolbar near selection (assign to recipient/role).
+  - Variables panel and conditional visibility per block.
+  - Autosave, snapshots/versioning, keyboard shortcuts.
+
+## Editor Architecture & UX
+- Layout: Header (actions), left page navigator (optional), center canvas (multi-page), right sidebar (Fields/Blocks/Properties).
+- Renderer: Abstraction that supports PDF/Docx imported pages and editable blocks; start with pdf.js client previews and block overlays; consider server-generated thumbnails for performance.
+- Blocks & Fields: Registry extends with PandaDoc-style fields and content blocks; inspectors configured via shadcn forms.
+- Pages Model: Per-page array with properties; operations (add/delete/duplicate/merge/reorder) and undo/redo stack.
+- Assignment & Roles: Assign fields/blocks to recipients/roles; enforce lock rules; respect Clerk roles.
+- Send & Invite: Menu with Email/SMS/Link; validates approvals complete; records delivery intent.
+- Performance: Virtualize page list, throttle layout recalcs, debounce autosave, snapshot diffing for redlines.
+
+## Data Model Additions (Prisma)
+- `documents` gains structured `docJson` with `pages: Page[]`, `blocks`, `fields`, and `variables`.
+- `document_pages (id, doc_id, order, meta_json)` if normalized; otherwise pages live in `docJson`.
+- `document_fields (id, doc_id, page_id, type, props_json, assigned_to_user_id/role_key)` when normalized.
+- `recipients (id, doc_id, email, name, role_key, delivery_method)`.
+- `versions/snapshots` table for editor history; alternatively keep in `docJson.snapshots` for draft.
+
+## API Endpoints & Hooks
+- Wizard:
+  - `POST /api/documents` create draft (templateId|upload|blank).
+  - `PUT /api/documents/:id/recipients` upsert recipients & delivery.
+  - `GET /api/templates` list with search; `GET /api/templates/:id`.
+- Editor:
+  - `GET /api/documents/:id` load doc;
+  - `PUT /api/documents/:id` save `docJson` (pages/blocks/fields/variables);
+  - `POST /api/documents/:id/snapshots` record version.
+- Sending:
+  - `POST /api/documents/:id/send` (Email/SMS/Link) with validation hooks.
+- Client hooks (TanStack Query + Axios): `useCreateDocument`, `useDocument`, `useUpdateDocument`, `useDeleteDocument`, `useTemplates`, `useRecipients`.
 
 ## Workflow & Collaboration
 - Approval Workflows:
@@ -130,141 +176,6 @@ Build a full document platform on Next.js + shadcn/ui, Postgres via Prisma ORM, 
 - Error Handling: API routes now use robust guards and try/catch, returning clear `401/400/404/500` responses.
 - Org Scope Fallback: When no org is selected, endpoints use personal scope `user:{userId}`; switching orgs automatically scopes data via session.
 - TanStack Query + Axios: Centralized client-side server state with Axios for consistent request semantics and future interceptors.
-
-## Document Editor & Viewer (Detailed Blueprint)
-
-### Core UX Structure (PandaDoc-like)
-- Canvas & Pages:
-  - Scrollable canvas with page frames; page size presets (A4/Letter) and zoom controls.
-  - Page management: add/remove/reorder pages; page break block.
-- Top Bar Actions:
-  - Invite collaborators; Send menu (Email/SMS/Link); Document status indicator (Draft/In Review/Approved).
-  - Undo/Redo, version history, export (PDF), and More actions (duplicate, delete).
-- Right Sidebar Panels:
-  - Fillable Fields: Text field, Signature, Initials, Date, Checkbox, Radio group, Dropdown, Billing details, Stamp.
-  - Blocks: Text, Image, Video, Table, Pricing table, Quote builder, Page break, Table of contents.
-  - Recipients: list, roles (sender, client, etc.), assignment targets.
-  - Variables: searchable data merge variables; bindings preview.
-  - Properties: styling, branding, alignment, spacing.
-- Inline Assignment Toolbar:
-  - Appears when selecting a field; controls: Assign recipient, Required, Formatting, Duplicate, Delete, Move layer.
-- Left Sidebar (optional):
-  - Page thumbnails and quick navigation; document outline.
-
-### Data Model (Prisma)
-- `documents (id, orgId, ownerId, title, status, docJson, createdAt, updatedAt)`
-- `document_pages (id, docId, order, size, backgroundJson)` — optional for complex paging
-- `recipients (id, docId, roleKey, name, email, auth_method, order)`
-- `fields (id, docId, pageId nullable, type, rectJson, propsJson, required, assignedRecipientId nullable)`
-  - types: text, signature, initials, date, checkbox, radio, dropdown, billing, stamp
-  - rectJson: x/y/width/height
-  - propsJson: settings/style
-- `blocks (id, docId, pageId nullable, type, rectJson, propsJson)`
-  - types: text, image, video, table, pricing, quote, page_break, toc
-- `variables (id, docId, key, valueJson, source)`
-- `deliveries (id, docId, channel, status, metaJson, createdAt)`
-- `signing_sessions (id, docId, status, token, createdAt)`
-- `signers (id, sessionId, recipientId, order, status)`
-- `signature_events (id, sessionId, signerId, type, metaJson, createdAt)`
-- Indices and FKs between `documents`, `recipients`, `fields`, `blocks`, `signers`.
-
-### API & Hooks
-- Axios client (`src/lib/http.ts`), TanStack Query hooks (`src/features/documents/queries.ts`).
-- Endpoints:
-  - `/api/documents`: list/create
-  - `/api/documents/[id]`: get/update/delete
-  - `/api/documents/[id]/recipients`: list/create/update/delete
-  - `/api/documents/[id]/fields`: list/create/update/delete; batch updates for drag/resizing
-  - `/api/documents/[id]/blocks`: list/create/update/delete
-  - `/api/send/[id]`: initiate delivery (email/SMS/link) and return session/link
-- Hooks:
-  - `useDocument`, `useUpdateDocument`, `useDeleteDocument`, `useCreateDocument`
-  - `useRecipients`, `useUpsertRecipient`, `useDeleteRecipient`
-  - `useFields`, `useUpsertField`, `useDeleteField`
-  - `useBlocks`, `useUpsertBlock`, `useDeleteBlock`
-  - `useSendDocument`
-
-### Component Map (shadcn/ui)
-- Layout: `Sidebar`, `ScrollArea`, `Card`, `Tabs`, `Button`, `DropdownMenu`, `Dialog`, `Sheet`.
-- Inputs: `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Date Picker`.
-- Tooling: `Popover`, `Tooltip`, `Menubar`, `Badge`, `Separator`.
-- Table/Pricing: use existing `table/*` utilities; pricing as block with configurable items and currency.
-- Drag-and-drop: `@dnd-kit` for selection/reorder; field/block resizing via handles.
-- Icons: shared `Icons` component; avoid hardcoded sizes and classes.
-
-### Interaction & Editing
-- Selection & Editing:
-  - Click to select; Inspector shows contextual controls (type-specific props & styles).
-  - Assignment: choose recipient from dropdown; quick add recipient within toolbar.
-- Drag & Resize:
-  - Drag blocks/fields; resize via corners; snap-to-grid and guides.
-  - Keyboard nudge and multi-select move.
-- Variables & Conditional Logic:
-  - Insert variables into text; preview resolved values; block `visible_if` evaluated live.
-- Branding:
-  - Apply org branding (logo, colors, fonts) via a branding layer; no custom CSS beyond tokens.
-
-### Sending & Recipients
-- Wizard (Dialog/Sheet): Get started → Add recipients → Review content.
-- Delivery options: Email/SMS/Link; 2FA per recipient; signing order (sequential/parallel).
-- Assignment auto-fill: roles help auto-assign common fields.
-
-### Viewer & Signing
-- Viewer renders resolved blocks/fields; mobile responsive; scrollable pages.
-- Signing flows for type/draw/upload signatures; final certificate appended.
-
-### Analytics & Audit
-- Track open/view/sign/download events; dashboards; full audit trail persisted.
-
-### Performance & Safety
-- Debounced batch updates for drags/resizes.
-- Role/permission gates via auth adapter.
-- Avoid custom styles; rely on shadcn components and design tokens.
-
-## Editor Implementation Phases (Step-by-Step)
-
-### Phase A: Shell & Panels
-1. Editor page layout: canvas with page frame, right sidebar tabs (Fillable Fields, Blocks, Recipients, Variables, Properties), top bar actions.
-2. Implement block palette and field palette lists using shadcn components.
-3. Selection model and inline toolbar shell.
-Acceptance: Can add blocks/fields to the canvas and select them; sidebar shows basic inspectors.
-
-### Phase B: Drag, Resize, Inspector
-1. Drag-and-drop placement; grid/snap; keyboard nudge.
-2. Resizable handles; bounds checking.
-3. Inspector controls per type (text, image, pricing, field types).
-Acceptance: Move/resize/save blocks/fields; inspector changes persist.
-
-### Phase C: Recipients & Assignment
-1. Recipients tab with add/edit/delete; role keys.
-2. Assign fields to recipients; inline toolbar assignment control.
-Acceptance: Add recipients; assign fillable fields; show badges for assignment.
-
-### Phase D: Variables & Conditional Logic
-1. Variables tab; insert variables into text blocks.
-2. Block `visible_if` rules; live evaluation.
-Acceptance: Variables resolve; conditionally hide/show blocks.
-
-### Phase E: Sending Wizard & Link/Email/SMS
-1. Send dialog with steps; select channel; signing order; optional 2FA.
-2. Create `signing_sessions` and return link/token.
-Acceptance: Can initiate a send and retrieve a working share link.
-
-### Phase F: Viewer & Signing
-1. Viewer page rendering; mobile-friendly.
-2. Signature capture; final certificate generation and attachment.
-Acceptance: Signers complete documents; certificate appended in export.
-
-### Phase G: Analytics & Audit
-1. Record events; dashboards.
-Acceptance: Engagement metrics visible; full audit trail present.
-
-## Build Instructions (Principles)
-- Use shadcn components for all UI (Buttons, Lists, Dialogs, Sheets, Tabs, Toolbars) instead of ad-hoc styles.
-- Centralize server-state in TanStack Query hooks; use Axios client; no inline fetch logic inside components.
-- Keep editor interactions accessible: keyboard navigation, focus states, tooltips.
-- Ensure types for blocks/fields/recipients; avoid `any` where possible.
-- Start small and iterate: implement shell, then DnD/resize, then inspectors, then recipients, then variables, then sending, then viewer/signing.
 
 ## Verification & Docs
 - Use Context7 MCP for official docs per milestone (Next.js server actions, middleware, Prisma, Clerk org/roles APIs, TanStack Query, Resend/SES, PDF generation).
