@@ -13,29 +13,29 @@ import { CreateRecipientModal } from './create-recipient-modal';
 import { useState } from 'react';
 
 interface FieldToolbarProps {
-  documentId: string;
   onAssign?: (recipientId: string) => void;
-  onProperties?: () => void;
-  onDuplicate?: () => void;
   onDelete?: () => void;
+  onDuplicate?: () => void;
   className?: string;
+  documentId: string;
   assignedRecipientId?: string | null;
   onDropdownOpenChange?: (open: boolean) => void;
   showCreateModal?: boolean;
-  onCreateModalChange?: (open: boolean) => void;
+  onCreateModalChange?: (show: boolean) => void;
+  onProperties?: () => void; // Keep onProperties as it's used later
 }
 
 export function FieldToolbar({
-  documentId,
   onAssign,
-  onProperties,
-  onDuplicate,
   onDelete,
+  onDuplicate,
   className,
+  documentId,
   assignedRecipientId,
   onDropdownOpenChange,
   showCreateModal = false,
-  onCreateModalChange
+  onCreateModalChange,
+  onProperties // Keep onProperties in destructuring
 }: FieldToolbarProps) {
   const recipients = useEditorStore((state) => state.recipients) || [];
   const assignedRecipient = recipients.find(
@@ -98,7 +98,20 @@ export function FieldToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className='mx-1 h-4 w-px bg-slate-600' />
+      <Button
+        variant='ghost'
+        size='sm'
+        className='h-8 w-8 p-0 text-white hover:bg-slate-700 hover:text-white'
+        onClick={(e) => {
+          e.stopPropagation();
+          onDuplicate?.();
+        }}
+        title='Duplicate field'
+      >
+        <Icons.copy className='h-4 w-4' />
+      </Button>
+
+      <div className='h-4 w-px bg-slate-600' />
 
       <Button
         variant='ghost'

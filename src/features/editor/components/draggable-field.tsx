@@ -34,39 +34,42 @@ export function DraggableField({
   pageNumber,
   documentId
 }: DraggableFieldProps) {
-  const selectedFieldId = useEditorStore((state) => state.selectedFieldId);
-  const selectField = useEditorStore((state) => state.selectField);
-  const deleteField = useEditorStore((state) => state.deleteField);
-  const duplicateField = useEditorStore((state) => state.duplicateField);
-  const updateField = useEditorStore((state) => state.updateField);
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isSelected = selectedFieldId === field.id;
+  const selectField = useEditorStore((state) => state.selectField);
+  const isSelected = useEditorStore(
+    (state) => state.selectedFieldId === field.id
+  );
+  const deleteField = useEditorStore((state) => state.deleteField);
+  const updateField = useEditorStore((state) => state.updateField);
+  const addField = useEditorStore((state) => state.addField);
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: field.id,
       data: {
-        type: field.type,
-        fieldId: field.id,
         isField: true,
-        width: field.width,
-        height: field.height
+        field,
+        pageNumber
       }
     });
-
-  const showToolbar =
-    (isSelected || isHovered || isDropdownOpen || showCreateModal) &&
-    !isDragging;
 
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`
       }
     : undefined;
+
+  // Field toolbar should show when:
+  // 1. Field is selected OR
+  // 2. Field is hovered OR
+  // 3. Dropdown is open OR
+  // 4. Create modal is open
+  const showToolbar =
+    isSelected || isHovered || isDropdownOpen || showCreateModal;
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {
@@ -80,6 +83,25 @@ export function DraggableField({
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false);
     }, 300);
+  };
+
+  const handleDelete = () => {
+    deleteField(pageNumber, field.id);
+  };
+
+  const handleAssign = (recipientId: string) => {
+    updateField(pageNumber, field.id, { recipientId });
+  };
+
+  const handleDuplicate = () => {
+    const newField = {
+      ...field,
+      id: `temp_${Date.now()}`,
+      x: field.x + 20, // Offset slightly
+      y: field.y + 20
+    };
+
+    addField(pageNumber, newField);
   };
 
   // Get field type configuration
@@ -141,19 +163,14 @@ export function DraggableField({
         onMouseLeave={handleMouseLeave}
       >
         <FieldToolbar
-          documentId={documentId}
-          assignedRecipientId={field.recipientId}
+          onAssign={handleAssign}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
           onDropdownOpenChange={setIsDropdownOpen}
+          assignedRecipientId={field.recipientId}
+          documentId={documentId}
           showCreateModal={showCreateModal}
           onCreateModalChange={setShowCreateModal}
-          onAssign={(recipientId) => {
-            useEditorStore
-              .getState()
-              .updateField(pageNumber, field.id, { recipientId });
-          }}
-          onProperties={() => console.log('Properties')}
-          onDuplicate={() => duplicateField(pageNumber, field.id)}
-          onDelete={() => deleteField(pageNumber, field.id)}
         />
       </PopoverContent>
     </Popover>
