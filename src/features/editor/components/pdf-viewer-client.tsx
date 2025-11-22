@@ -92,37 +92,75 @@ export function PDFViewerClient({
 
   if (!currentPdfUrl) {
     return (
-      <div className='flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed p-12'>
-        <Icons.upload className='text-muted-foreground mb-4 h-16 w-16' />
-        <p className='mb-2 text-lg font-medium'>Upload a PDF to get started</p>
-        <p className='text-muted-foreground mb-4 text-sm'>
-          Or create content using blocks and fields
-        </p>
-        <label htmlFor='pdf-upload'>
-          <Button disabled={uploadPDF.isPending} asChild>
-            <span>
-              {uploadPDF.isPending ? (
-                <>
-                  <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Icons.upload className='mr-2 h-4 w-4' />
-                  Upload PDF
-                </>
-              )}
-            </span>
-          </Button>
-        </label>
-        <input
-          id='pdf-upload'
-          type='file'
-          accept='application/pdf'
-          className='hidden'
-          onChange={handleFileInputChange}
-          disabled={uploadPDF.isPending}
-        />
+      <div className='relative h-full w-full overflow-auto bg-gray-50'>
+        <div className='mx-auto flex min-h-full flex-col items-center justify-start gap-4 py-8'>
+          <div className='flex w-[800px] items-center justify-between rounded-lg border bg-white p-4 shadow-sm'>
+            <div>
+              <p className='font-medium'>No PDF document</p>
+              <p className='text-muted-foreground text-xs'>
+                Upload a PDF or drop fields on the pages below
+              </p>
+            </div>
+            <label htmlFor='pdf-upload'>
+              <Button
+                variant='outline'
+                size='sm'
+                disabled={uploadPDF.isPending}
+                asChild
+              >
+                <span>
+                  {uploadPDF.isPending ? (
+                    <>
+                      <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Icons.upload className='mr-2 h-4 w-4' />
+                      Upload PDF
+                    </>
+                  )}
+                </span>
+              </Button>
+            </label>
+            <input
+              id='pdf-upload'
+              type='file'
+              accept='application/pdf'
+              className='hidden'
+              onChange={handleFileInputChange}
+              disabled={uploadPDF.isPending}
+            />
+          </div>
+
+          {/* Render placeholder pages for field drops */}
+          <div className='space-y-4'>
+            {pages.map((pageData) => (
+              <DroppablePageWrapper
+                key={`page_${pageData.pageNumber}`}
+                pageNumber={pageData.pageNumber}
+                className='mb-4'
+                fields={pageData?.fields || []}
+                documentId={documentId}
+              >
+                <div
+                  className='bg-white shadow-lg'
+                  style={{
+                    width: pageData.width || 612,
+                    height: pageData.height || 792
+                  }}
+                >
+                  <div className='flex h-full w-full items-center justify-center'>
+                    <div className='text-muted-foreground text-center'>
+                      <p className='text-sm'>Page {pageData.pageNumber}</p>
+                      <p className='text-xs'>Drop fields here</p>
+                    </div>
+                  </div>
+                </div>
+              </DroppablePageWrapper>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
