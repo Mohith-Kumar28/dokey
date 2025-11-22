@@ -43,6 +43,10 @@ import {
   IconUserPin,
   IconLogin2,
   IconLayoutKanban,
+  IconTypography,
+  IconPencil,
+  IconSelector,
+  IconCircleDot,
   IconProps
 } from '@tabler/icons-react';
 
@@ -92,5 +96,9 @@ export const Icons = {
   briefcase: IconBriefcase,
   userPen: IconUserPin,
   login: IconLogin2,
-  kanban: IconLayoutKanban
+  kanban: IconLayoutKanban,
+  type: IconTypography,
+  pen: IconPencil,
+  select: IconSelector,
+  circle: IconCircleDot
 };

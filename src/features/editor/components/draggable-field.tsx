@@ -4,6 +4,7 @@ import { Icons } from '@/components/icons';
 import { FieldToolbar } from './field-toolbar';
 import { useEditorStore } from '../store/use-editor-store';
 import { useState, useRef } from 'react';
+import { getFieldTypeConfig } from '../config/field-type-config';
 
 interface DraggableFieldProps {
   field: {
@@ -81,6 +82,10 @@ export function DraggableField({
     }, 300);
   };
 
+  // Get field type configuration
+  const fieldConfig = getFieldTypeConfig(field.type);
+  const FieldIcon = Icons[fieldConfig.icon];
+
   return (
     <Popover open={showToolbar}>
       <PopoverTrigger asChild>
@@ -94,9 +99,10 @@ export function DraggableField({
             height: field.height
           }}
           className={cn(
-            'group absolute z-10 flex cursor-move items-center justify-center text-xs transition-shadow',
-            'border border-blue-500 bg-blue-50/80 text-blue-700',
-            isSelected && 'ring-2 ring-blue-600 ring-offset-1',
+            'group absolute z-10 flex cursor-move items-center justify-center gap-1.5 text-xs transition-shadow',
+            `border ${fieldConfig.borderColor} ${fieldConfig.bgColor} ${fieldConfig.textColor}`,
+            isSelected && 'ring-2 ring-offset-1',
+            isSelected && `ring-${fieldConfig.color}-600`,
             isDragging && 'opacity-50',
             !isDragging && 'hover:shadow-md'
           )}
@@ -109,7 +115,8 @@ export function DraggableField({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <span className='pointer-events-none truncate px-1 font-medium select-none'>
+          <FieldIcon className='h-3 w-3' />
+          <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
             {field.type}
           </span>
           {field.recipientId && (
