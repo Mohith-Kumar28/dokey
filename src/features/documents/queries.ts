@@ -37,6 +37,7 @@ export function useDocument(id: string) {
         height: number;
         value?: string | null;
         required: boolean;
+        recipientId?: string | null;
       }>;
     }>;
     recipients: Array<{

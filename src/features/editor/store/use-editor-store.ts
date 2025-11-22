@@ -13,6 +13,10 @@ export type Field = {
   value?: string | null;
   required?: boolean;
   recipientId?: string | null;
+  label?: string;
+  placeholder?: string;
+  defaultValue?: string;
+  options?: string[];
 };
 
 export type Page = {

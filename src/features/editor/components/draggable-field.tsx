@@ -37,6 +37,7 @@ export function DraggableField({
   const selectField = useEditorStore((state) => state.selectField);
   const deleteField = useEditorStore((state) => state.deleteField);
   const duplicateField = useEditorStore((state) => state.duplicateField);
+  const updateField = useEditorStore((state) => state.updateField);
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -77,7 +78,7 @@ export function DraggableField({
   const handleMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false);
-    }, 300); // 300ms delay to allow moving to toolbar
+    }, 300);
   };
 
   return (
@@ -93,15 +94,15 @@ export function DraggableField({
             height: field.height
           }}
           className={cn(
-            'group absolute z-20 flex cursor-move items-center justify-center text-xs transition-shadow',
+            'group absolute z-[100] flex cursor-move items-center justify-center text-xs transition-shadow',
             'border border-blue-500 bg-blue-50/80 text-blue-700',
-            isSelected && 'z-30 ring-2 ring-blue-600 ring-offset-1',
+            isSelected && 'ring-2 ring-blue-600 ring-offset-1',
             isDragging && 'opacity-50',
             !isDragging && 'hover:shadow-md'
           )}
           {...listeners}
           {...attributes}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             selectField(field.id);
           }}

@@ -19,6 +19,8 @@ import {
 } from '@/features/documents/queries';
 import { PDFViewer } from './components/pdf-viewer';
 import { PageThumbnails } from './components/page-thumbnails';
+import { FieldProperties } from './components/field-properties';
+import { RecipientSelector } from './components/recipient-selector';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useEditorStore } from './store/use-editor-store';
 import { debounce } from 'lodash';
@@ -41,32 +43,51 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     type: string;
     label: string;
   } | null>(null);
+  const [selectedRecipientFilter, setSelectedRecipientFilter] = useState('all');
 
   // Zustand Store
-  const { pages, setDocument, addField, setSaving, isSaving } =
+  const { pages, setDocument, addField, setSaving, isSaving, selectedFieldId } =
     useEditorStore();
 
   // Initialize store when document loads
   useEffect(() => {
-    if (docQuery.data?.pages) {
-      // Map API pages to store pages
-      const storePages = docQuery.data.pages.map((p) => ({
-        id: p.id,
-        pageNumber: p.pageNumber,
-        width: p.width,
-        height: p.height,
-        fields: p.fields.map((f) => ({
-          id: f.id,
-          type: f.type,
-          x: f.x,
-          y: f.y,
-          width: f.width,
-          height: f.height,
-          pageId: p.id,
-          value: f.value,
-          required: f.required
-        }))
-      }));
+    if (docQuery.data) {
+      let storePages;
+
+      if (docQuery.data.pages && docQuery.data.pages.length > 0) {
+        // Document has pages from PDF
+        storePages = docQuery.data.pages.map((p) => ({
+          id: p.id,
+          pageNumber: p.pageNumber,
+          width: p.width,
+          height: p.height,
+          fields: p.fields.map((f) => ({
+            id: f.id,
+            type: f.type,
+            x: f.x,
+            y: f.y,
+            width: f.width,
+            height: f.height,
+            pageId: p.id,
+            value: f.value,
+            required: f.required,
+            recipientId: f.recipientId
+          }))
+        }));
+      } else {
+        // New document without PDF - create default pages
+        const defaultPageWidth = 612; // 8.5 inches at 72 DPI
+        const defaultPageHeight = 792; // 11 inches at 72 DPI
+
+        storePages = Array.from({ length: 11 }, (_, index) => ({
+          id: `temp-page-${index + 1}`,
+          pageNumber: index + 1,
+          width: defaultPageWidth,
+          height: defaultPageHeight,
+          fields: []
+        }));
+      }
+
       setDocument(storePages, docQuery.data.recipients || []);
     }
   }, [docQuery.data, setDocument]);
@@ -175,22 +196,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         if (active.data.current?.isField) {
           // Moving an existing field
           const fieldId = active.data.current.fieldId;
-          // Find which page the field was originally on (could be different)
           const sourcePage = pages.find((p) =>
             p.fields.some((f) => f.id === fieldId)
           );
 
           if (sourcePage) {
-            // If moving to a different page, we need to remove from source and add to target
-            // For now, let's assume moving within same page or handle simple update if store supports it
-            // Actually, our store structure is nested.
-            // Simplest is to update the field's pageId and coordinates.
-
-            // Check if we need to move to a different page
             if (sourcePage.pageNumber !== pageNumber) {
-              // Remove from old page, add to new page
-              // This requires a moveField action in store, or we can just delete and add
-              // Let's add a moveField action to store for cleaner implementation
               useEditorStore
                 .getState()
                 .updateField(sourcePage.pageNumber, fieldId, {
@@ -198,8 +209,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                   y,
                   pageId: pages.find((p) => p.pageNumber === pageNumber)?.id
                 });
-              // TODO: If page changed, we need to actually move the field object to the new page array
-              // For now, let's just update coordinates if on same page
             } else {
               useEditorStore
                 .getState()
@@ -210,6 +219,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
           // Creating a new field from sidebar
           const fieldType = active.data.current.type;
           const page = pages.find((p) => p.pageNumber === pageNumber);
+
           if (page) {
             addField(pageNumber, {
               id: `temp_${Date.now()}`,
@@ -224,6 +234,8 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             toast.success(
               `Added ${active.data.current.label} to page ${pageNumber}`
             );
+          } else {
+            toast.error('Failed to add field - page not found');
           }
         }
       }
@@ -500,64 +512,79 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               </div>
 
               {/* Fillable Fields Tab */}
-              <TabsContent value='fields' className='mt-0 flex-1 space-y-4 p-4'>
-                <div className='space-y-2'>
-                  <label className='text-muted-foreground text-xs font-semibold uppercase'>
-                    Fillable fields for
-                  </label>
-                  <Input
-                    placeholder='Start typing name or email'
-                    className='text-sm'
-                  />
-                </div>
+              <TabsContent
+                value='fields'
+                className='mt-0 flex h-full flex-col p-0'
+              >
+                {selectedFieldId ? (
+                  <FieldProperties />
+                ) : (
+                  <div className='flex h-full flex-col space-y-4 p-4'>
+                    <div className='space-y-2'>
+                      <label className='text-muted-foreground text-xs font-semibold uppercase'>
+                        Fillable fields for
+                      </label>
+                      <RecipientSelector
+                        value={selectedRecipientFilter}
+                        onValueChange={setSelectedRecipientFilter}
+                      />
+                    </div>
 
-                <div className='space-y-2'>
-                  <DraggableSidebarItem
-                    type='text'
-                    label='Text field'
-                    icon={<span className='mr-2 font-semibold'>Aa</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='signature'
-                    label='Signature'
-                    icon={<span className='mr-2'>✍️</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='initials'
-                    label='Initials'
-                    icon={<span className='mr-2 font-semibold'>IN</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='date'
-                    label='Date'
-                    icon={<span className='mr-2'>📅</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='checkbox'
-                    label='Checkbox'
-                    icon={<span className='mr-2'>☑</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='radio'
-                    label='Radio buttons'
-                    icon={<span className='mr-2'>⊙</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='dropdown'
-                    label='Dropdown'
-                    icon={<span className='mr-2'>▼</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='billing'
-                    label='Billing details'
-                    icon={<span className='mr-2'>💳</span>}
-                  />
-                  <DraggableSidebarItem
-                    type='stamp'
-                    label='Stamp'
-                    icon={<span className='mr-2'>🔖</span>}
-                  />
-                </div>
+                    {selectedRecipientFilter !== 'all' && (
+                      <p className='text-muted-foreground text-xs'>
+                        Showing fields for selected recipient
+                      </p>
+                    )}
+
+                    <div className='space-y-2'>
+                      <DraggableSidebarItem
+                        type='text'
+                        label='Text field'
+                        icon={<Icons.page className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='signature'
+                        label='Signature'
+                        icon={<Icons.user className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='initials'
+                        label='Initials'
+                        icon={<Icons.user className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='date'
+                        label='Date'
+                        icon={<Icons.calendar className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='checkbox'
+                        label='Checkbox'
+                        icon={<Icons.check className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='radio'
+                        label='Radio buttons'
+                        icon={<Icons.chevronRight className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='dropdown'
+                        label='Dropdown'
+                        icon={<Icons.chevronDown className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='billing'
+                        label='Billing details'
+                        icon={<Icons.billing className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='stamp'
+                        label='Stamp'
+                        icon={<Icons.save className='h-4 w-4' />}
+                      />
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               {/* Blocks Tab */}

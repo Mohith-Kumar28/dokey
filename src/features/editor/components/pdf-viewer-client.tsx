@@ -15,8 +15,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 interface PDFViewerClientProps {
   documentId: string;
   pdfUrl?: string;
-  pages?: Array<{
+  pages: Array<{
+    id: string;
     pageNumber: number;
+    width: number;
+    height: number;
     fields: Array<{
       id: string;
       type: string;

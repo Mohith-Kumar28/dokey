@@ -51,7 +51,7 @@ export function DroppablePageWrapper({
 
       {/* Overlay for drop indication */}
       {isOver && (
-        <div className='bg-primary/10 pointer-events-none absolute inset-0 z-50' />
+        <div className='bg-primary/10 pointer-events-none absolute inset-0 z-[200]' />
       )}
     </div>
   );
