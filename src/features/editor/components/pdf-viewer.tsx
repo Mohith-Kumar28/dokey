@@ -19,10 +19,23 @@ const PDFViewerClient = dynamic(
   }
 );
 
-interface PDFViewerProps {
+export interface PDFViewerProps {
   documentId: string;
   pdfUrl?: string;
-  pages?: any[]; // TODO: Type this properly
+  pages: Array<{
+    id: string;
+    pageNumber: number;
+    width: number;
+    height: number;
+    fields: Array<{
+      id: string;
+      type: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>;
+  }>;
   onPdfUploaded?: (url: string) => void;
 }
 
