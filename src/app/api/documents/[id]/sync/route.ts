@@ -72,6 +72,7 @@ export async function POST(
                 height: field.height,
                 required: field.required || false,
                 value: field.value,
+                recipientId: field.recipientId || null,
                 properties: {}
               }
             });
@@ -85,7 +86,8 @@ export async function POST(
                 width: field.width,
                 height: field.height,
                 value: field.value,
-                required: field.required
+                required: field.required,
+                recipientId: field.recipientId || null
               }
             });
           }

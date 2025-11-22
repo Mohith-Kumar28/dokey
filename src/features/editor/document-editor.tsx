@@ -480,6 +480,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                   documentId={id}
                   pdfUrl={doc.pdfUrl || undefined}
                   pages={pages}
+                  selectedRecipientId={selectedRecipientFilter}
                   onPdfUploaded={(url) => {
                     toast.success('PDF uploaded');
                     docQuery.refetch();

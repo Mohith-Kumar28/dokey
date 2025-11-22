@@ -94,7 +94,7 @@ export function DraggableField({
             height: field.height
           }}
           className={cn(
-            'group absolute z-[100] flex cursor-move items-center justify-center text-xs transition-shadow',
+            'group absolute z-10 flex cursor-move items-center justify-center text-xs transition-shadow',
             'border border-blue-500 bg-blue-50/80 text-blue-700',
             isSelected && 'ring-2 ring-blue-600 ring-offset-1',
             isDragging && 'opacity-50',

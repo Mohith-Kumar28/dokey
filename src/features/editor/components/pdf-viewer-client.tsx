@@ -30,6 +30,7 @@ interface PDFViewerClientProps {
     }>;
   }>;
   onPdfUploaded?: (url: string) => void;
+  selectedRecipientId?: string;
 }
 
 const pdfOptions = {
@@ -41,7 +42,8 @@ export function PDFViewerClient({
   documentId,
   pdfUrl,
   pages,
-  onPdfUploaded
+  onPdfUploaded,
+  selectedRecipientId = 'all'
 }: PDFViewerClientProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(pdfUrl);
@@ -142,6 +144,7 @@ export function PDFViewerClient({
                 className='mb-4'
                 fields={pageData?.fields || []}
                 documentId={documentId}
+                selectedRecipientId={selectedRecipientId}
               >
                 <div
                   className='bg-white shadow-lg'
@@ -249,6 +252,7 @@ export function PDFViewerClient({
                 className='mb-4'
                 fields={pageData?.fields || []}
                 documentId={documentId}
+                selectedRecipientId={selectedRecipientId}
               >
                 <Page
                   pageNumber={pageNumber}

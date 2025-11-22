@@ -10,6 +10,7 @@ interface DroppablePageWrapperProps {
   className?: string;
   fields?: any[];
   documentId: string;
+  selectedRecipientId?: string; // 'all' or specific recipient ID
 }
 
 export function DroppablePageWrapper({
@@ -17,7 +18,8 @@ export function DroppablePageWrapper({
   children,
   className,
   fields = [],
-  documentId
+  documentId,
+  selectedRecipientId = 'all'
 }: DroppablePageWrapperProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `page-${pageNumber}`,
@@ -26,6 +28,12 @@ export function DroppablePageWrapper({
       isPage: true
     }
   });
+
+  // Filter fields based on selected recipient
+  const filteredFields =
+    selectedRecipientId === 'all'
+      ? fields
+      : fields.filter((field) => field.recipientId === selectedRecipientId);
 
   return (
     <div
@@ -39,8 +47,7 @@ export function DroppablePageWrapper({
       {children}
 
       {/* Render Fields */}
-      {/* Render Fields */}
-      {fields.map((field) => (
+      {filteredFields.map((field) => (
         <DraggableField
           key={field.id}
           field={field}
