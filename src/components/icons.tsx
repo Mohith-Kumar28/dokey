@@ -51,6 +51,9 @@ import {
   IconCircleDot,
   IconSquare,
   IconSquareCheck,
+  IconMinus,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarRightCollapse,
   IconProps
 } from '@tabler/icons-react';
 
@@ -58,6 +61,7 @@ export type Icon = React.ComponentType<IconProps>;
 
 export const Icons = {
   add: IconPlus,
+  minus: IconMinus,
   arrowLeft: IconArrowLeft,
   arrowRight: IconArrowRight,
   bell: IconBell,
@@ -108,5 +112,7 @@ export const Icons = {
   send: IconSend,
   link: IconLink,
   select: IconSelector,
-  circle: IconCircleDot
+  circle: IconCircleDot,
+  sidebarLeft: IconLayoutSidebarLeftCollapse,
+  sidebarRight: IconLayoutSidebarRightCollapse
 };

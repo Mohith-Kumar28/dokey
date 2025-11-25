@@ -11,6 +11,7 @@ interface DroppablePageWrapperProps {
   fields?: any[];
   documentId: string;
   selectedRecipientId?: string; // 'all' or specific recipient ID
+  scale?: number;
 }
 
 export function DroppablePageWrapper({
@@ -19,7 +20,8 @@ export function DroppablePageWrapper({
   className,
   fields = [],
   documentId,
-  selectedRecipientId = 'all'
+  selectedRecipientId = 'all',
+  scale = 1
 }: DroppablePageWrapperProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `page-${pageNumber}`,
@@ -53,6 +55,7 @@ export function DroppablePageWrapper({
           field={field}
           pageNumber={pageNumber}
           documentId={documentId}
+          scale={scale}
         />
       ))}
 

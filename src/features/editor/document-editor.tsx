@@ -29,6 +29,12 @@ import { toast } from 'sonner';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { DraggableSidebarItem } from './components/draggable-sidebar-item';
 import { SendDocumentModal } from './components/send-document-modal';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle
+} from '@/components/ui/sheet';
 
 interface DocumentEditorProps {
   id: string;
@@ -47,6 +53,9 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const [selectedRecipientFilter, setSelectedRecipientFilter] = useState('all');
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [sendMode, setSendMode] = useState<'email' | 'link'>('email');
+  const [zoom, setZoom] = useState(100);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
   // Zustand Store
   const { pages, setDocument, addField, setSaving, isSaving, selectedFieldId } =
@@ -316,8 +325,10 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       const pageRect = over.rect;
 
       if (dropRect && pageRect) {
-        const x = dropRect.left - pageRect.left;
-        const y = dropRect.top - pageRect.top;
+        // Adjust coordinates based on zoom scale
+        const scale = zoom / 100;
+        const x = (dropRect.left - pageRect.left) / scale;
+        const y = (dropRect.top - pageRect.top) / scale;
 
         if (active.data.current?.isField) {
           // Moving an existing field
@@ -366,6 +377,18 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
         }
       }
     }
+  };
+
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 25, 200));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 25, 50));
+  };
+
+  const handleZoomReset = () => {
+    setZoom(100);
   };
 
   // Deselect field when clicking on canvas background
@@ -427,6 +450,26 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             </Button>
 
             <div className='bg-border mx-2 h-6 w-px' />
+
+            <Button
+              variant='ghost'
+              size='icon'
+              title='Toggle page thumbnails'
+              onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+            >
+              <Icons.sidebarLeft className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon'
+              title='Toggle content panel'
+              onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+              className='md:hidden'
+            >
+              <Icons.sidebarRight className='h-4 w-4' />
+            </Button>
+
+            <div className='bg-border mx-2 h-6 w-px md:hidden' />
 
             <Button variant='ghost' size='sm'>
               <Icons.user className='mr-2 h-4 w-4' />
@@ -550,21 +593,9 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
         {/* Main Content Area */}
         <div className='flex flex-1 overflow-hidden'>
-          {/* Left Sidebar - Page Thumbnails */}
-          <PageThumbnails
-            pdfUrl={doc.pdfUrl || undefined}
-            currentPage={1} // TODO: Track current page state
-            onPageSelect={(page) => {
-              const element = document.getElementById(`page_container_${page}`);
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-          />
-
           {/* Document Canvas */}
           <div
-            className='bg-muted/30 flex-1 overflow-y-auto p-8'
+            className='bg-muted/30 relative flex-1 overflow-y-auto p-8'
             onClick={handleCanvasClick}
           >
             <div className='mx-auto max-w-4xl space-y-4'>
@@ -589,7 +620,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        // Duplicate the first page for now, or active page if tracked
                         useEditorStore.getState().duplicatePage(1);
                         toast.success('Page duplicated');
                       }}
@@ -597,27 +627,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       <Icons.page className='mr-2 h-4 w-4' />
                       Duplicate page
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Icons.arrowRight className='mr-2 h-4 w-4' />
-                      Merge with page above
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Icons.add className='mr-2 h-4 w-4' />
-                      Add to Content Library
-                      <span className='ml-auto text-xs'>⭐ Upgrade</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className='text-destructive'
                       onClick={() => {
-                        if (pages.length > 1) {
-                          useEditorStore.getState().deletePage(1);
-                          toast.success('Page deleted');
-                        } else {
-                          toast.error('Cannot delete the last page');
-                        }
+                        useEditorStore.getState().deletePage(1);
+                        toast.success('Page deleted');
                       }}
+                      className='text-destructive'
                     >
                       <Icons.trash className='mr-2 h-4 w-4' />
                       Delete page
@@ -626,58 +641,63 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 </DropdownMenu>
               </div>
 
-              {/* Add Page Button */}
-              <Button
-                variant='outline'
-                size='sm'
-                className='w-full'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Find the last page number
-                  const lastPage =
-                    pages.length > 0 ? pages[pages.length - 1].pageNumber : 0;
-                  // Optimistically add page
-                  const newPage = {
-                    id: `temp_page_${Date.now()}`,
-                    pageNumber: lastPage + 1,
-                    width: 800,
-                    height: 1100,
-                    fields: []
-                  };
-                  useEditorStore.getState().addPage(lastPage, newPage);
-                }}
-              >
-                <Icons.add className='mr-2 h-4 w-4' />
-                Add page
-              </Button>
-
-              {/* Document Page */}
-              <Card className='dark:bg-card min-h-[11in] bg-white shadow-lg'>
+              {/* PDF Viewer */}
+              <div className='min-h-[800px]'>
                 <PDFViewer
                   documentId={id}
                   pdfUrl={doc.pdfUrl || undefined}
                   pages={pages}
-                  selectedRecipientId={selectedRecipientFilter}
-                  onPdfUploaded={(url) => {
+                  onPdfUploaded={async (url) => {
+                    await saveMutation.mutateAsync({ pdfUrl: url });
                     toast.success('PDF uploaded');
-                    docQuery.refetch();
                   }}
+                  selectedRecipientId={selectedRecipientFilter}
+                  scale={zoom / 100}
                 />
-              </Card>
+              </div>
+            </div>
+
+            {/* Zoom Controls */}
+            <div className='bg-background/95 supports-[backdrop-filter]:bg-background/60 fixed right-8 bottom-8 flex items-center gap-2 rounded-full border shadow-lg backdrop-blur'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 rounded-l-full'
+                onClick={handleZoomOut}
+                disabled={zoom <= 50}
+              >
+                <Icons.minus className='h-4 w-4' />
+              </Button>
+              <span className='w-12 text-center text-xs font-medium'>
+                {zoom}%
+              </span>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 rounded-r-full'
+                onClick={handleZoomIn}
+                disabled={zoom >= 200}
+              >
+                <Icons.add className='h-4 w-4' />
+              </Button>
+              <div className='bg-border h-4 w-px' />
+              <Button
+                variant='ghost'
+                size='sm'
+                className='h-8 px-2 text-xs'
+                onClick={handleZoomReset}
+              >
+                Reset
+              </Button>
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <div className='bg-card w-80 overflow-y-auto border-l'>
+          {/* Right Sidebar - Fixed on Desktop, Hidden on Mobile */}
+          <div className='bg-card hidden w-80 overflow-y-auto border-l md:block'>
             <Tabs defaultValue='fields' className='flex h-full flex-col'>
               <div className='border-b'>
                 <div className='px-4 py-3'>
-                  <div className='mb-2 flex items-center justify-between'>
-                    <h3 className='text-sm font-semibold'>Content</h3>
-                    <Button variant='ghost' size='icon' className='h-6 w-6'>
-                      <Icons.close className='h-4 w-4' />
-                    </Button>
-                  </div>
+                  <h3 className='text-sm font-semibold'>Content</h3>
                 </div>
                 <TabsList className='grid w-full grid-cols-2 rounded-none'>
                   <TabsTrigger value='fields' className='text-xs'>
@@ -843,6 +863,203 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
             </Tabs>
           </div>
         </div>
+
+        {/* Right Sidebar as Sheet - Only on Mobile */}
+        <Sheet open={isRightSidebarOpen} onOpenChange={setIsRightSidebarOpen}>
+          <SheetContent side='right' className='w-80 p-0 md:hidden'>
+            <Tabs defaultValue='fields' className='flex h-full flex-col'>
+              <div className='border-b'>
+                <SheetHeader className='p-4 pb-3'>
+                  <SheetTitle className='text-sm'>Content</SheetTitle>
+                </SheetHeader>
+                <TabsList className='grid w-full grid-cols-2 rounded-none'>
+                  <TabsTrigger value='fields' className='text-xs'>
+                    Fillable fields
+                  </TabsTrigger>
+                  <TabsTrigger value='blocks' className='text-xs'>
+                    Blocks 🔒
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Fillable Fields Tab */}
+              <TabsContent
+                value='fields'
+                className='mt-0 flex h-full flex-col p-0'
+              >
+                {selectedFieldId ? (
+                  <FieldProperties />
+                ) : (
+                  <div className='flex h-full flex-col space-y-4 p-4'>
+                    <div className='space-y-2'>
+                      <label className='text-muted-foreground text-xs font-semibold uppercase'>
+                        Fillable fields for
+                      </label>
+                      <RecipientSelector
+                        value={selectedRecipientFilter}
+                        onValueChange={setSelectedRecipientFilter}
+                      />
+                    </div>
+
+                    {selectedRecipientFilter !== 'all' && (
+                      <p className='text-muted-foreground text-xs'>
+                        Showing fields for selected recipient
+                      </p>
+                    )}
+
+                    <div className='space-y-2'>
+                      <DraggableSidebarItem
+                        type='text'
+                        label='Text field'
+                        icon={<Icons.page className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='signature'
+                        label='Signature'
+                        icon={<Icons.user className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='initials'
+                        label='Initials'
+                        icon={<Icons.user className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='date'
+                        label='Date'
+                        icon={<Icons.calendar className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='checkbox'
+                        label='Checkbox'
+                        icon={<Icons.check className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='radio'
+                        label='Radio buttons'
+                        icon={<Icons.chevronRight className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='dropdown'
+                        label='Dropdown'
+                        icon={<Icons.chevronDown className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='billing'
+                        label='Billing details'
+                        icon={<Icons.billing className='h-4 w-4' />}
+                      />
+                      <DraggableSidebarItem
+                        type='stamp'
+                        label='Stamp'
+                        icon={<Icons.save className='h-4 w-4' />}
+                      />
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Blocks Tab */}
+              <TabsContent value='blocks' className='mt-0 flex-1 space-y-4 p-4'>
+                <div className='space-y-2'>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <Icons.page className='mr-2 h-4 w-4' />
+                    Text
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <Icons.media className='mr-2 h-4 w-4' />
+                    Image
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <span className='mr-2'>🎥</span>
+                    Video
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <span className='mr-2'>📊</span>
+                    Table
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <Icons.billing className='mr-2 h-4 w-4' />
+                    Pricing table
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <span className='mr-2'>💰</span>
+                    Quote builder
+                    <span className='ml-auto rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700'>
+                      UPDATED
+                    </span>
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <span className='mr-2'>📄</span>
+                    Page break
+                    <span className='text-muted-foreground ml-auto text-xs'>
+                      ⌃ X
+                    </span>
+                  </Button>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    size='sm'
+                  >
+                    <span className='mr-2'>📑</span>
+                    Table of contents
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </SheetContent>
+        </Sheet>
+
+        {/* Left Sidebar as Sheet - Page Thumbnails */}
+        <Sheet open={isLeftSidebarOpen} onOpenChange={setIsLeftSidebarOpen}>
+          <SheetContent side='left' className='w-64 p-0'>
+            <SheetHeader className='p-4'>
+              <SheetTitle className='text-sm'>Pages</SheetTitle>
+            </SheetHeader>
+            <div className='overflow-y-auto'>
+              <PageThumbnails
+                pdfUrl={doc.pdfUrl || undefined}
+                currentPage={1} // TODO: Track current page state
+                onPageSelect={(page) => {
+                  const element = document.getElementById(
+                    `page_container_${page}`
+                  );
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
+                  setIsLeftSidebarOpen(false); // Close sidebar after selecting a page
+                }}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
       <DragOverlay>
         {activeDragItem ? (

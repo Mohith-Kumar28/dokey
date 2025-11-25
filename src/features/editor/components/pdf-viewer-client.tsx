@@ -32,6 +32,7 @@ interface PDFViewerClientProps {
   }>;
   onPdfUploaded?: (url: string) => void;
   selectedRecipientId?: string;
+  scale?: number;
 }
 
 const pdfOptions = {
@@ -44,7 +45,8 @@ export function PDFViewerClient({
   pdfUrl,
   pages,
   onPdfUploaded,
-  selectedRecipientId = 'all'
+  selectedRecipientId = 'all',
+  scale = 1
 }: PDFViewerClientProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(pdfUrl);
@@ -146,12 +148,13 @@ export function PDFViewerClient({
                 fields={pageData?.fields || []}
                 documentId={documentId}
                 selectedRecipientId={selectedRecipientId}
+                scale={scale}
               >
                 <div
                   className='bg-white shadow-lg'
                   style={{
-                    width: pageData.width || 612,
-                    height: pageData.height || 792
+                    width: (pageData.width || 612) * scale,
+                    height: (pageData.height || 792) * scale
                   }}
                 >
                   <div className='flex h-full w-full items-center justify-center'>
@@ -259,13 +262,14 @@ export function PDFViewerClient({
                 fields={pageData?.fields || []}
                 documentId={documentId}
                 selectedRecipientId={selectedRecipientId}
+                scale={scale}
               >
                 <Page
                   pageNumber={pdfPageIndex}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   className='shadow-lg'
-                  width={800}
+                  width={800 * scale}
                 />
               </DroppablePageWrapper>
 

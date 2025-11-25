@@ -30,6 +30,7 @@ interface DraggableFieldProps {
   };
   pageNumber: number;
   documentId: string;
+  scale: number;
 }
 
 import {
@@ -41,7 +42,8 @@ import {
 export function DraggableField({
   field,
   pageNumber,
-  documentId
+  documentId,
+  scale
 }: DraggableFieldProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -162,10 +164,10 @@ export function DraggableField({
           ref={setNodeRef}
           style={{
             ...style,
-            left: field.x,
-            top: field.y,
-            width: field.width,
-            height: field.height
+            left: field.x * scale,
+            top: field.y * scale,
+            width: field.width * scale,
+            height: field.height * scale
           }}
           className={cn(
             'group absolute z-10 flex cursor-move items-center justify-center gap-1.5 text-xs transition-shadow',

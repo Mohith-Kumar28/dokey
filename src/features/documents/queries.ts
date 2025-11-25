@@ -61,7 +61,9 @@ export function useDocument(id: string) {
 export function useUpdateDocument(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Partial<{ title: string; docJson: any }>) => {
+    mutationFn: async (
+      payload: Partial<{ title: string; docJson: any; pdfUrl: string }>
+    ) => {
       const res = await http.put(`/api/documents/${id}`, payload);
       return res.data;
     },

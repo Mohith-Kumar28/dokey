@@ -38,6 +38,7 @@ export interface PDFViewerProps {
   }>;
   onPdfUploaded?: (url: string) => void;
   selectedRecipientId?: string;
+  scale?: number;
 }
 
 export function PDFViewer(props: PDFViewerProps) {
