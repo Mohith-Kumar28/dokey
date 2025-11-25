@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { DraggableSidebarItem } from './components/draggable-sidebar-item';
+import { SendDocumentModal } from './components/send-document-modal';
 
 interface DocumentEditorProps {
   id: string;
@@ -44,6 +45,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     label: string;
   } | null>(null);
   const [selectedRecipientFilter, setSelectedRecipientFilter] = useState('all');
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
 
   // Zustand Store
   const { pages, setDocument, addField, setSaving, isSaving, selectedFieldId } =
@@ -430,28 +432,20 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               Invite
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className='bg-green-600 text-white hover:bg-green-700'>
-                  Send
-                  <Icons.chevronRight className='ml-2 h-4 w-4 rotate-90' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-56'>
-                <div className='px-2 py-1.5 text-sm font-semibold'>
-                  Send document via
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Icons.user className='mr-2 h-4 w-4' />
-                  Email / Text (SMS)
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Icons.arrowRight className='mr-2 h-4 w-4' />
-                  Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              className='bg-green-600 text-white hover:bg-green-700'
+              onClick={() => setIsSendModalOpen(true)}
+            >
+              Send
+              <Icons.chevronRight className='ml-2 h-4 w-4 rotate-90' />
+            </Button>
+
+            <SendDocumentModal
+              open={isSendModalOpen}
+              onOpenChange={setIsSendModalOpen}
+              documentId={id}
+              recipients={doc.recipients || []}
+            />
 
             <Button variant='ghost' size='icon' title='View mode'>
               <Icons.eye className='h-4 w-4' />

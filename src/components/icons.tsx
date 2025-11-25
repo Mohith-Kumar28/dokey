@@ -45,6 +45,7 @@ import {
   IconLayoutKanban,
   IconTypography,
   IconPencil,
+  IconSend,
   IconSelector,
   IconCircleDot,
   IconSquare,
@@ -103,6 +104,7 @@ export const Icons = {
   kanban: IconLayoutKanban,
   type: IconTypography,
   pen: IconPencil,
+  send: IconSend,
   select: IconSelector,
   circle: IconCircleDot
 };

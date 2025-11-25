@@ -146,3 +146,17 @@ export function useCreateRecipient(docId: string) {
     }
   });
 }
+
+export function useSendDocument(docId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await http.post(`/api/documents/${docId}/send`, {});
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['document', docId] });
+      qc.invalidateQueries({ queryKey: ['documents'] });
+    }
+  });
+}
