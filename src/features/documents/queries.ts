@@ -150,8 +150,11 @@ export function useCreateRecipient(docId: string) {
 export function useSendDocument(docId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const res = await http.post(`/api/documents/${docId}/send`, {});
+    mutationFn: async (payload: {
+      title?: string;
+      deliveryMethod: 'email' | 'link';
+    }) => {
+      const res = await http.post(`/api/documents/${docId}/send`, payload);
       return res.data;
     },
     onSuccess: () => {

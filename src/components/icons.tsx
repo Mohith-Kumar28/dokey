@@ -46,6 +46,7 @@ import {
   IconTypography,
   IconPencil,
   IconSend,
+  IconLink,
   IconSelector,
   IconCircleDot,
   IconSquare,
@@ -105,6 +106,7 @@ export const Icons = {
   type: IconTypography,
   pen: IconPencil,
   send: IconSend,
+  link: IconLink,
   select: IconSelector,
   circle: IconCircleDot
 };

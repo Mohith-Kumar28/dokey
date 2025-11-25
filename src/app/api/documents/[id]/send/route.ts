@@ -15,9 +15,12 @@ export async function POST(
     const orgId = (session.orgId as string | null) ?? `user:${userId}`;
     const { id } = await params;
 
+    const { title, deliveryMethod } = await req.json();
+
     // Verify document ownership
     const document = await prisma.document.findFirst({
-      where: { id, orgId }
+      where: { id, orgId },
+      include: { recipients: true }
     });
 
     if (!document) {
@@ -27,18 +30,30 @@ export async function POST(
       );
     }
 
-    // Update status to SENT
+    // Update status to SENT and update title if provided
     const updatedDoc = await prisma.document.update({
       where: { id },
       data: {
-        status: 'SENT'
+        status: 'SENT',
+        ...(title && { title })
       }
     });
 
-    // TODO: Integrate actual email sending service (Resend, SendGrid, etc.)
-    console.log(`[Send] Document ${id} sent to recipients`);
+    let links: Record<string, string> = {};
+    if (deliveryMethod === 'link') {
+      const origin = req.headers.get('origin') || 'http://localhost:3000';
+      document.recipients.forEach((recipient) => {
+        // Generate unique link for each recipient
+        // In a real app, this should be a secure, signed token
+        links[recipient.id] =
+          `${origin}/sign/${id}?recipientId=${recipient.id}`;
+      });
+    }
 
-    return NextResponse.json(updatedDoc);
+    // TODO: Integrate actual email sending service (Resend, SendGrid, etc.)
+    console.log(`[Send] Document ${id} sent via ${deliveryMethod}`);
+
+    return NextResponse.json({ ...updatedDoc, links });
   } catch (error) {
     console.error('[Send] Error:', error);
     return NextResponse.json(

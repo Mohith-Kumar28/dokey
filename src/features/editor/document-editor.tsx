@@ -46,6 +46,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   } | null>(null);
   const [selectedRecipientFilter, setSelectedRecipientFilter] = useState('all');
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [sendMode, setSendMode] = useState<'email' | 'link'>('email');
 
   // Zustand Store
   const { pages, setDocument, addField, setSaving, isSaving, selectedFieldId } =
@@ -432,19 +433,56 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               Invite
             </Button>
 
-            <Button
-              className='bg-green-600 text-white hover:bg-green-700'
-              onClick={() => setIsSendModalOpen(true)}
-            >
-              Send
-              <Icons.chevronRight className='ml-2 h-4 w-4 rotate-90' />
-            </Button>
+            <DropdownMenu>
+              <div className='flex items-center rounded-md bg-green-600 text-white hover:bg-green-700'>
+                <Button
+                  className='rounded-r-none border-r border-green-700 bg-transparent text-white hover:bg-transparent'
+                  onClick={() => {
+                    setSendMode('email');
+                    setIsSendModalOpen(true);
+                  }}
+                >
+                  Send
+                </Button>
+                <DropdownMenuTrigger asChild>
+                  <Button className='rounded-l-none bg-transparent px-2 text-white hover:bg-transparent'>
+                    <Icons.chevronDown className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+              </div>
+              <DropdownMenuContent align='end' className='w-56'>
+                <div className='px-2 py-1.5 text-sm font-semibold'>
+                  Send document via
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSendMode('email');
+                    setIsSendModalOpen(true);
+                  }}
+                >
+                  <Icons.mail className='mr-2 h-4 w-4' />
+                  Email / Text (SMS)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSendMode('link');
+                    setIsSendModalOpen(true);
+                  }}
+                >
+                  <Icons.link className='mr-2 h-4 w-4' />
+                  Link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <SendDocumentModal
               open={isSendModalOpen}
               onOpenChange={setIsSendModalOpen}
               documentId={id}
+              documentTitle={doc.title}
               recipients={doc.recipients || []}
+              mode={sendMode}
             />
 
             <Button variant='ghost' size='icon' title='View mode'>
