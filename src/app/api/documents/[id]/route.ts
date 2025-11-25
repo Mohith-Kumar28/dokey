@@ -26,7 +26,7 @@ export async function GET(_req: Request, { params }: Params) {
     const doc = await getDocument(orgScope, id);
 
     // Debug logging
-    if (doc?.pages?.length > 0 && doc.pages[0].fields?.length > 0) {
+    if (doc?.pages && doc.pages.length > 0 && doc.pages[0].fields?.length > 0) {
       console.log('[GET Document] Sample field from DB:', {
         id: doc.pages[0].fields[0].id,
         type: doc.pages[0].fields[0].type,
