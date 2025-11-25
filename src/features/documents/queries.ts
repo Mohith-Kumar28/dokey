@@ -38,6 +38,8 @@ export function useDocument(id: string) {
         value?: string | null;
         required: boolean;
         recipientId?: string | null;
+        label?: string | null;
+        properties?: any;
       }>;
     }>;
     recipients: Array<{

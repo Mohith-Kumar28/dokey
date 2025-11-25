@@ -21,7 +21,7 @@ import { PDFViewer } from './components/pdf-viewer';
 import { PageThumbnails } from './components/page-thumbnails';
 import { FieldProperties } from './components/field-properties';
 import { RecipientSelector } from './components/recipient-selector';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useEditorStore } from './store/use-editor-store';
 import { debounce } from 'lodash';
 import { cn } from '@/lib/utils';
@@ -55,24 +55,41 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       let storePages;
 
       if (docQuery.data.pages && docQuery.data.pages.length > 0) {
+        console.log('Loading pages from API:', docQuery.data.pages);
         // Document has pages from PDF
         storePages = docQuery.data.pages.map((p) => ({
           id: p.id,
           pageNumber: p.pageNumber,
           width: p.width,
           height: p.height,
-          fields: p.fields.map((f) => ({
-            id: f.id,
-            type: f.type,
-            x: f.x,
-            y: f.y,
-            width: f.width,
-            height: f.height,
-            pageId: p.id,
-            value: f.value,
-            required: f.required,
-            recipientId: f.recipientId
-          }))
+          fields: p.fields.map((f) => {
+            console.log(
+              '[Load] Mapping field:',
+              f.id,
+              'Raw properties from DB:',
+              f.properties
+            );
+            // Ensure properties is an object
+            const props = (f.properties as any) || {};
+            const mapped = {
+              id: f.id,
+              type: f.type,
+              x: f.x,
+              y: f.y,
+              width: f.width,
+              height: f.height,
+              pageId: p.id,
+              value: f.value,
+              required: f.required,
+              recipientId: f.recipientId,
+              label: f.label || undefined,
+              placeholder: props.placeholder,
+              defaultValue: props.defaultValue,
+              options: props.options
+            };
+            console.log('[Load] Mapped field:', mapped);
+            return mapped;
+          })
         }));
       } else {
         // New document without PDF - create default pages
@@ -92,38 +109,124 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     }
   }, [docQuery.data, setDocument]);
 
-  // Memoized save function
-  const saveChanges = useCallback(
-    async (pages: any[]) => {
+  // Use ref to store the latest mutation to avoid recreating the debounced function
+  const syncMutationRef = useRef(syncMutation);
+  useEffect(() => {
+    syncMutationRef.current = syncMutation;
+  }, [syncMutation]);
+
+  // Track when we're updating IDs internally to prevent triggering another save
+  const isUpdatingIdsRef = useRef(false);
+
+  // Create stable debounced save function using ref
+  const debouncedSave = useMemo(() => {
+    const saveChanges = async (pages: any[]) => {
       try {
-        await syncMutation.mutateAsync({ pages });
+        setSaving(true);
+
+        const result = await syncMutationRef.current.mutateAsync({ pages });
+
+        // Update field IDs if there are any mappings
+        if (
+          result.fieldIdMappings &&
+          Object.keys(result.fieldIdMappings).length > 0
+        ) {
+          isUpdatingIdsRef.current = true; // Set flag before updating
+
+          // Use the pages we just saved (with all their properties intact)
+          // instead of fetching fresh state which might have changed
+          const updatedPages = pages.map((page) => ({
+            ...page,
+            fields: page.fields.map((field: any) => {
+              const newId = result.fieldIdMappings[field.id];
+              if (newId) {
+                return { ...field, id: newId };
+              }
+              return field;
+            })
+          }));
+
+          useEditorStore.setState({ pages: updatedPages });
+
+          // Reset flag after a short delay to allow the state update to complete
+          setTimeout(() => {
+            isUpdatingIdsRef.current = false;
+          }, 100);
+        }
+
         setSaving(false);
         toast.success('Saved');
       } catch (error) {
+        console.error('[Auto-save] Error:', error);
         setSaving(false);
         toast.error('Failed to save changes');
       }
-    },
-    [syncMutation, setSaving]
-  );
-
-  // Create stable debounced function
-  const debouncedSave = useMemo(
-    () => debounce(saveChanges, 2000),
-    [saveChanges]
-  );
+    };
+    return debounce(saveChanges, 2000);
+  }, [setSaving]); // Only recreate if setSaving changes (which it shouldn't)
 
   // Auto-save subscription
   useEffect(() => {
     const unsub = useEditorStore.subscribe(
       (state) => state.pages,
       (pages) => {
-        setSaving(true);
+        // Don't trigger save if we're just updating IDs internally
+        if (isUpdatingIdsRef.current) {
+          return;
+        }
         debouncedSave(pages);
       }
     );
-    return () => unsub();
-  }, [debouncedSave, setSaving]);
+    return () => {
+      unsub();
+      debouncedSave.cancel();
+    };
+  }, [debouncedSave]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to deselect field
+      if (e.key === 'Escape' && selectedFieldId) {
+        useEditorStore.getState().selectField(null);
+      }
+
+      // Delete to remove selected field
+      if (e.key === 'Delete' && selectedFieldId) {
+        const field = pages
+          .flatMap((p) =>
+            p.fields.map((f) => ({ ...f, pageNumber: p.pageNumber }))
+          )
+          .find((f) => f.id === selectedFieldId);
+        if (field) {
+          useEditorStore.getState().deleteField(field.pageNumber, field.id);
+          useEditorStore.getState().selectField(null);
+        }
+      }
+
+      // Cmd/Ctrl + D to duplicate
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd' && selectedFieldId) {
+        e.preventDefault();
+        const field = pages
+          .flatMap((p) =>
+            p.fields.map((f) => ({ ...f, pageNumber: p.pageNumber }))
+          )
+          .find((f) => f.id === selectedFieldId);
+        if (field) {
+          const newField = {
+            ...field,
+            id: `temp_${Date.now()}`,
+            x: field.x + 20,
+            y: field.y + 20
+          };
+          useEditorStore.getState().addField(field.pageNumber, newField);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFieldId, pages]);
 
   if (docQuery.isLoading) {
     return (

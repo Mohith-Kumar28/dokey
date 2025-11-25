@@ -86,6 +86,20 @@ export function DraggableField({
   };
 
   const handleDelete = () => {
+    console.log(
+      '[DraggableField] handleDelete called for field:',
+      field.id,
+      'on page:',
+      pageNumber
+    );
+
+    // Close popover and deselect immediately
+    setIsHovered(false);
+    setIsDropdownOpen(false);
+    setShowCreateModal(false);
+    selectField(null);
+
+    // Then delete the field
     deleteField(pageNumber, field.id);
   };
 
@@ -130,9 +144,23 @@ export function DraggableField({
           )}
           {...listeners}
           {...attributes}
-          onClick={(e: React.MouseEvent) => {
+          tabIndex={0}
+          onPointerDown={(e) => {
+            // Select immediately on mouse down (like Figma/Canva)
             e.stopPropagation();
             selectField(field.id);
+            // Pass event to dnd-kit listeners
+            listeners?.onPointerDown?.(e);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectField(field.id);
+            }
+            listeners?.onKeyDown?.(e);
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

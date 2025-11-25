@@ -81,32 +81,45 @@ export const useEditorStore = create<EditorState>()(
       })),
 
     updateField: (pageNumber, fieldId, updates) =>
-      set((state) => ({
-        pages: state.pages.map((p) =>
-          p.pageNumber === pageNumber
-            ? {
-                ...p,
-                fields: p.fields.map((f) =>
-                  f.id === fieldId ? { ...f, ...updates } : f
-                )
-              }
-            : p
-        )
-      })),
+      set((state) => {
+        return {
+          pages: state.pages.map((p) =>
+            p.pageNumber === pageNumber
+              ? {
+                  ...p,
+                  fields: p.fields.map((f) => {
+                    if (f.id === fieldId) {
+                      const updated = { ...f, ...updates };
+
+                      return updated;
+                    }
+                    return f;
+                  })
+                }
+              : p
+          )
+        };
+      }),
 
     deleteField: (pageNumber, fieldId) =>
-      set((state) => ({
-        pages: state.pages.map((p) =>
-          p.pageNumber === pageNumber
-            ? {
-                ...p,
-                fields: p.fields.filter((f) => f.id !== fieldId)
-              }
-            : p
-        ),
-        selectedFieldId:
-          state.selectedFieldId === fieldId ? null : state.selectedFieldId
-      })),
+      set((state) => {
+        return {
+          pages: state.pages.map((p) =>
+            p.pageNumber === pageNumber
+              ? {
+                  ...p,
+                  fields: p.fields.filter((f) => {
+                    const keep = f.id !== fieldId;
+
+                    return keep;
+                  })
+                }
+              : p
+          ),
+          selectedFieldId:
+            state.selectedFieldId === fieldId ? null : state.selectedFieldId
+        };
+      }),
 
     duplicateField: (pageNumber, fieldId) =>
       set((state) => {

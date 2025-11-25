@@ -7,6 +7,13 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useState } from 'react';
 
 export function FieldProperties() {
@@ -133,18 +140,72 @@ export function FieldProperties() {
         {selectedField.type === 'dropdown' && (
           <div className='space-y-2'>
             <Label>Options</Label>
-            <p className='text-muted-foreground text-xs'>
-              Add options for the dropdown (coming soon)
-            </p>
+            <div className='space-y-2'>
+              {(selectedField.options || []).map(
+                (option: string, index: number) => (
+                  <div key={index} className='flex gap-2'>
+                    <Input
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...(selectedField.options || [])];
+                        newOptions[index] = e.target.value;
+                        handleUpdate({ options: newOptions });
+                      }}
+                      placeholder={`Option ${index + 1}`}
+                      className='text-sm'
+                    />
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => {
+                        const newOptions = (selectedField.options || []).filter(
+                          (_: string, i: number) => i !== index
+                        );
+                        handleUpdate({ options: newOptions });
+                      }}
+                    >
+                      <Icons.trash className='h-4 w-4' />
+                    </Button>
+                  </div>
+                )
+              )}
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  const newOptions = [
+                    ...(selectedField.options || []),
+                    `Option ${(selectedField.options || []).length + 1}`
+                  ];
+                  handleUpdate({ options: newOptions });
+                }}
+                className='w-full'
+              >
+                <Icons.add className='mr-2 h-4 w-4' />
+                Add Option
+              </Button>
+            </div>
           </div>
         )}
 
         {selectedField.type === 'date' && (
           <div className='space-y-2'>
             <Label>Date Format</Label>
-            <p className='text-muted-foreground text-xs'>
-              Configure date format (coming soon)
-            </p>
+            <Select
+              value={selectedField.defaultValue || 'MM/DD/YYYY'}
+              onValueChange={(value) => handleUpdate({ defaultValue: value })}
+            >
+              <SelectTrigger className='text-sm'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='MM/DD/YYYY'>MM/DD/YYYY</SelectItem>
+                <SelectItem value='DD/MM/YYYY'>DD/MM/YYYY</SelectItem>
+                <SelectItem value='YYYY-MM-DD'>YYYY-MM-DD</SelectItem>
+                <SelectItem value='MMM DD, YYYY'>MMM DD, YYYY</SelectItem>
+                <SelectItem value='DD MMM YYYY'>DD MMM YYYY</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
