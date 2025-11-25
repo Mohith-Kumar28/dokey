@@ -55,7 +55,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       let storePages;
 
       if (docQuery.data.pages && docQuery.data.pages.length > 0) {
-        console.log('Loading pages from API:', docQuery.data.pages);
         // Document has pages from PDF
         storePages = docQuery.data.pages.map((p) => ({
           id: p.id,
@@ -63,12 +62,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
           width: p.width,
           height: p.height,
           fields: p.fields.map((f) => {
-            console.log(
-              '[Load] Mapping field:',
-              f.id,
-              'Raw properties from DB:',
-              f.properties
-            );
             // Ensure properties is an object
             const props = (f.properties as any) || {};
             const mapped = {
@@ -87,7 +80,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
               defaultValue: props.defaultValue,
               options: props.options
             };
-            console.log('[Load] Mapped field:', mapped);
+
             return mapped;
           })
         }));
