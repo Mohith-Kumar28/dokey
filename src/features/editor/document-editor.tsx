@@ -607,38 +607,6 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                     • {pages.length} {pages.length === 1 ? 'page' : 'pages'}
                   </span>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant='ghost' size='icon'>
-                      <Icons.ellipsis className='h-4 w-4' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end'>
-                    <DropdownMenuItem>
-                      <Icons.settings className='mr-2 h-4 w-4' />
-                      Page properties
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        useEditorStore.getState().duplicatePage(1);
-                        toast.success('Page duplicated');
-                      }}
-                    >
-                      <Icons.page className='mr-2 h-4 w-4' />
-                      Duplicate page
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        useEditorStore.getState().deletePage(1);
-                        toast.success('Page deleted');
-                      }}
-                      className='text-destructive'
-                    >
-                      <Icons.trash className='mr-2 h-4 w-4' />
-                      Delete page
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
 
               {/* PDF Viewer */}

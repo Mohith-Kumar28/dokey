@@ -2,6 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -253,8 +259,53 @@ export function PDFViewerClient({
           return (
             <div
               key={`page_container_${pageNumber}`}
+              id={`page_container_${pageNumber}`}
               className='group/page relative'
             >
+              {/* Page Operations Menu */}
+              <div className='absolute top-2 right-2 z-20 opacity-0 transition-opacity group-hover/page:opacity-100'>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant='secondary'
+                      size='icon'
+                      className='h-8 w-8 shadow-md'
+                    >
+                      <Icons.ellipsis className='h-4 w-4' />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end'>
+                    <DropdownMenuItem>
+                      <Icons.settings className='mr-2 h-4 w-4' />
+                      Page properties
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        useEditorStore.getState().duplicatePage(pageNumber);
+                        toast.success('Page duplicated');
+                      }}
+                    >
+                      <Icons.page className='mr-2 h-4 w-4' />
+                      Duplicate page
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (pages.length > 1) {
+                          useEditorStore.getState().deletePage(pageNumber);
+                          toast.success('Page deleted');
+                        } else {
+                          toast.error('Cannot delete the last page');
+                        }
+                      }}
+                      className='text-destructive'
+                    >
+                      <Icons.trash className='mr-2 h-4 w-4' />
+                      Delete page
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               <DroppablePageWrapper
                 key={`page_${pageNumber}`}
                 pageNumber={pageNumber}
