@@ -16,7 +16,7 @@ export async function POST(
     const { id } = await params;
 
     const body = await req.json();
-    console.log('Create field request body:', body);
+
     const { pageNumber, type, x, y, width, height, pageWidth, pageHeight } =
       body;
 
@@ -52,7 +52,6 @@ export async function POST(
     });
 
     if (!page) {
-      console.log('Creating new page:', { docId: id, pageNumber });
       try {
         page = await prisma.documentPage.create({
           data: {
@@ -73,7 +72,7 @@ export async function POST(
     }
 
     // Create Field
-    console.log('Creating field on page:', page.id);
+
     try {
       const field = await prisma.field.create({
         data: {

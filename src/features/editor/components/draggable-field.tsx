@@ -86,13 +86,6 @@ export function DraggableField({
   };
 
   const handleDelete = () => {
-    console.log(
-      '[DraggableField] handleDelete called for field:',
-      field.id,
-      'on page:',
-      pageNumber
-    );
-
     // Close popover and deselect immediately
     setIsHovered(false);
     setIsDropdownOpen(false);

@@ -25,16 +25,6 @@ export async function GET(_req: Request, { params }: Params) {
     const { id } = await params;
     const doc = await getDocument(orgScope, id);
 
-    // Debug logging
-    if (doc?.pages && doc.pages.length > 0 && doc.pages[0].fields?.length > 0) {
-      console.log('[GET Document] Sample field from DB:', {
-        id: doc.pages[0].fields[0].id,
-        type: doc.pages[0].fields[0].type,
-        label: doc.pages[0].fields[0].label,
-        properties: doc.pages[0].fields[0].properties
-      });
-    }
-
     if (!doc) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json(doc);
   } catch (e) {

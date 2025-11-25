@@ -19,14 +19,6 @@ export async function POST(
     const body = await req.json();
     const { pages } = body;
 
-    console.log('[Sync API] Received payload:', {
-      pageCount: pages?.length,
-      totalFields: pages?.reduce(
-        (sum: number, p: any) => sum + (p.fields?.length || 0),
-        0
-      )
-    });
-
     if (!pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
@@ -120,9 +112,6 @@ export async function POST(
               });
               // Store the mapping of temp ID to real ID
               fieldIdMappings[field.id] = newField.id;
-              console.log(
-                `[Sync] Created field: ${field.id} -> ${newField.id}`
-              );
             } else {
               // Update existing field
               await tx.field.update({
