@@ -25,6 +25,7 @@ export type Page = {
   width: number;
   height: number;
   fields: Field[];
+  pdfPageIndex?: number; // 1-based index of the source PDF page
 };
 
 export type Recipient = {
@@ -54,6 +55,8 @@ interface EditorState {
   deleteField: (pageNumber: number, fieldId: string) => void;
   duplicateField: (pageNumber: number, fieldId: string) => void;
   addPage: (afterPageNumber: number, newPage: Page) => void;
+  duplicatePage: (pageNumber: number) => void;
+  deletePage: (pageNumber: number) => void;
   addRecipient: (recipient: Recipient) => void;
   setActivePage: (pageNumber: number) => void;
   setSaving: (isSaving: boolean) => void;
@@ -163,6 +166,50 @@ export const useEditorStore = create<EditorState>()(
           // If adding to the end or if list is empty (though afterPageNumber suggests existing)
           newPages.push(newPage);
         }
+        return { pages: newPages };
+      }),
+
+    duplicatePage: (pageNumber) =>
+      set((state) => {
+        const pageToDuplicate = state.pages.find(
+          (p) => p.pageNumber === pageNumber
+        );
+        if (!pageToDuplicate) return state;
+
+        const newPage: Page = {
+          ...pageToDuplicate,
+          id: `temp_page_${Date.now()}`,
+          pageNumber: pageNumber + 1,
+          fields: pageToDuplicate.fields.map((f) => ({
+            ...f,
+            id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            pageId: `temp_page_${Date.now()}` // Will be updated by backend
+          }))
+        };
+
+        const newPages = [...state.pages];
+        const index = newPages.findIndex((p) => p.pageNumber === pageNumber);
+
+        // Insert new page
+        newPages.splice(index + 1, 0, newPage);
+
+        // Re-index subsequent pages
+        for (let i = index + 2; i < newPages.length; i++) {
+          newPages[i].pageNumber = i + 1;
+        }
+
+        return { pages: newPages };
+      }),
+
+    deletePage: (pageNumber) =>
+      set((state) => {
+        const newPages = state.pages.filter((p) => p.pageNumber !== pageNumber);
+
+        // Re-index pages
+        newPages.forEach((p, index) => {
+          p.pageNumber = index + 1;
+        });
+
         return { pages: newPages };
       }),
 

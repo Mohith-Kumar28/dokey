@@ -20,6 +20,7 @@ interface PDFViewerClientProps {
     pageNumber: number;
     width: number;
     height: number;
+    pdfPageIndex?: number;
     fields: Array<{
       id: string;
       type: string;
@@ -237,9 +238,14 @@ export function PDFViewerClient({
         }
         options={pdfOptions}
       >
-        {Array.from(new Array(numPages), (el, index) => {
-          const pageNumber = index + 1;
-          const pageData = pages?.find((p) => p.pageNumber === pageNumber);
+        {pages.map((pageData) => {
+          const pageNumber = pageData.pageNumber;
+          // Use the mapped PDF page index if available, otherwise default to pageNumber
+          // Ensure we don't exceed the actual PDF page count
+          const pdfPageIndex = Math.min(
+            pageData.pdfPageIndex || pageData.pageNumber,
+            numPages
+          );
 
           return (
             <div
@@ -255,7 +261,7 @@ export function PDFViewerClient({
                 selectedRecipientId={selectedRecipientId}
               >
                 <Page
-                  pageNumber={pageNumber}
+                  pageNumber={pdfPageIndex}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   className='shadow-lg'

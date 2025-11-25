@@ -40,6 +40,29 @@ export async function POST(
 
     await prisma.$transaction(
       async (tx) => {
+        // 1. Identify pages to delete (present in DB but missing from payload)
+        const payloadPageNumbers = pages.map((p: any) => p.pageNumber);
+
+        // Get all existing pages for this document
+        const existingPages = await tx.documentPage.findMany({
+          where: { docId: id },
+          select: { pageNumber: true }
+        });
+
+        // Determine which pages to delete
+        const pagesToDelete = existingPages
+          .filter((p) => !payloadPageNumbers.includes(p.pageNumber))
+          .map((p) => p.pageNumber);
+
+        if (pagesToDelete.length > 0) {
+          await tx.documentPage.deleteMany({
+            where: {
+              docId: id,
+              pageNumber: { in: pagesToDelete }
+            }
+          });
+        }
+
         for (const page of pages) {
           // Ensure page exists (create if not)
           const dbPage = await tx.documentPage.upsert({

@@ -56,11 +56,16 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
       if (docQuery.data.pages && docQuery.data.pages.length > 0) {
         // Document has pages from PDF
+        // Get page mappings from docJson if available
+        const pageMappings = docQuery.data.docJson?.pageMappings || {};
+
         storePages = docQuery.data.pages.map((p) => ({
           id: p.id,
           pageNumber: p.pageNumber,
           width: p.width,
           height: p.height,
+          // Use mapped PDF page index or default to pageNumber
+          pdfPageIndex: pageMappings[p.pageNumber] || p.pageNumber,
           fields: p.fields.map((f) => {
             // Ensure properties is an object
             const props = (f.properties as any) || {};
@@ -108,6 +113,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     syncMutationRef.current = syncMutation;
   }, [syncMutation]);
 
+  // Use ref to store latest doc data for auto-save
+  const docDataRef = useRef(docQuery.data);
+  useEffect(() => {
+    docDataRef.current = docQuery.data;
+  }, [docQuery.data]);
+
   // Track when we're updating IDs internally to prevent triggering another save
   const isUpdatingIdsRef = useRef(false);
 
@@ -117,7 +128,29 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       try {
         setSaving(true);
 
+        // 1. Sync pages and fields
         const result = await syncMutationRef.current.mutateAsync({ pages });
+
+        // 2. Save page mappings to docJson
+        const pageMappings = pages.reduce(
+          (acc, page) => {
+            if (page.pdfPageIndex) {
+              acc[page.pageNumber] = page.pdfPageIndex;
+            }
+            return acc;
+          },
+          {} as Record<number, number>
+        );
+
+        const currentDoc = docDataRef.current;
+        if (currentDoc) {
+          await saveMutation.mutateAsync({
+            docJson: {
+              ...currentDoc.docJson,
+              pageMappings
+            }
+          });
+        }
 
         // Update field IDs if there are any mappings
         if (
@@ -156,7 +189,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       }
     };
     return debounce(saveChanges, 2000);
-  }, [setSaving]); // Only recreate if setSaving changes (which it shouldn't)
+  }, [setSaving, saveMutation]); // Only recreate if dependencies change
 
   // Auto-save subscription
   useEffect(() => {
@@ -206,13 +239,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
           )
           .find((f) => f.id === selectedFieldId);
         if (field) {
-          const newField = {
-            ...field,
-            id: `temp_${Date.now()}`,
-            x: field.x + 20,
-            y: field.y + 20
-          };
-          useEditorStore.getState().addField(field.pageNumber, newField);
+          useEditorStore.getState().duplicateField(field.pageNumber, field.id);
         }
       }
     };
@@ -343,6 +370,12 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
     // Only deselect if clicking directly on the canvas or page wrapper, not on a field
     // The field's onClick has stopPropagation, so this should work
     useEditorStore.getState().selectField(null);
+  };
+
+  // Helper to get current page number (simplified for now)
+  const getCurrentPageNumber = () => {
+    // In a real app, this would use intersection observer to find visible page
+    return 1;
   };
 
   return (
@@ -508,7 +541,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                 <div className='flex items-center gap-2'>
                   <h2 className='text-lg font-semibold'>{doc.title}</h2>
                   <span className='text-muted-foreground text-sm'>
-                    • 1 page
+                    • {pages.length} {pages.length === 1 ? 'page' : 'pages'}
                   </span>
                 </div>
                 <DropdownMenu>
@@ -522,7 +555,13 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       <Icons.settings className='mr-2 h-4 w-4' />
                       Page properties
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // Duplicate the first page for now, or active page if tracked
+                        useEditorStore.getState().duplicatePage(1);
+                        toast.success('Page duplicated');
+                      }}
+                    >
                       <Icons.page className='mr-2 h-4 w-4' />
                       Duplicate page
                     </DropdownMenuItem>
@@ -537,7 +576,17 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
                       <span className='ml-auto text-xs'>⭐ Upgrade</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className='text-destructive'>
+                    <DropdownMenuItem
+                      className='text-destructive'
+                      onClick={() => {
+                        if (pages.length > 1) {
+                          useEditorStore.getState().deletePage(1);
+                          toast.success('Page deleted');
+                        } else {
+                          toast.error('Cannot delete the last page');
+                        }
+                      }}
+                    >
                       <Icons.trash className='mr-2 h-4 w-4' />
                       Delete page
                     </DropdownMenuItem>
