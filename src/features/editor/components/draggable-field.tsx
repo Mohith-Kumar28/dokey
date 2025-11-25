@@ -5,6 +5,11 @@ import { FieldToolbar } from './field-toolbar';
 import { useEditorStore } from '../store/use-editor-store';
 import { useState, useRef } from 'react';
 import { getFieldTypeConfig } from '../config/field-type-config';
+import { TextFieldInput } from './field-inputs/text-field-input';
+import { CheckboxFieldInput } from './field-inputs/checkbox-field-input';
+import { DropdownFieldInput } from './field-inputs/dropdown-field-input';
+import { DateFieldInput } from './field-inputs/date-field-input';
+import { SignatureFieldInput } from './field-inputs/signature-field-input';
 
 interface DraggableFieldProps {
   field: {
@@ -18,6 +23,10 @@ interface DraggableFieldProps {
     value?: string | null;
     required?: boolean;
     recipientId?: string | null;
+    label?: string;
+    placeholder?: string;
+    defaultValue?: string;
+    options?: string[];
   };
   pageNumber: number;
   documentId: string;
@@ -37,7 +46,9 @@ export function DraggableField({
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
 
   const selectField = useEditorStore((state) => state.selectField);
   const isSelected = useEditorStore(
@@ -111,6 +122,35 @@ export function DraggableField({
     addField(pageNumber, newField);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('Double click detected on field:', field.id, field.type);
+    // Only enter edit mode for editable field types
+    const editableTypes = [
+      'text',
+      'date',
+      'checkbox',
+      'dropdown',
+      'signature',
+      'stamp'
+    ];
+    if (editableTypes.includes(field.type.toLowerCase())) {
+      console.log('Entering edit mode for field:', field.id);
+      setIsEditMode(true);
+    } else {
+      console.log('Field type not editable:', field.type);
+    }
+  };
+
+  const handleSaveValue = (value: string) => {
+    updateField(pageNumber, field.id, { value });
+    setIsEditMode(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+  };
+
   // Get field type configuration
   const fieldConfig = getFieldTypeConfig(field.type);
   const FieldIcon = Icons[fieldConfig.icon];
@@ -135,33 +175,138 @@ export function DraggableField({
             isDragging && 'opacity-50',
             !isDragging && 'hover:shadow-md'
           )}
-          {...listeners}
           {...attributes}
           tabIndex={0}
-          onPointerDown={(e) => {
-            // Select immediately on mouse down (like Figma/Canva)
-            e.stopPropagation();
-            selectField(field.id);
-            // Pass event to dnd-kit listeners
-            listeners?.onPointerDown?.(e);
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              selectField(field.id);
-            }
-            listeners?.onKeyDown?.(e);
-          }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <FieldIcon className='h-3 w-3' />
-          <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
-            {field.type}
-          </span>
+          {/* Interaction Layer - Only active when not editing */}
+          {!isEditMode && (
+            <div
+              className='absolute inset-0 z-20'
+              {...listeners}
+              onDoubleClick={handleDoubleClick}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                selectField(field.id);
+                listeners?.onPointerDown?.(e);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  selectField(field.id);
+                }
+                listeners?.onKeyDown?.(e);
+              }}
+            />
+          )}
+
+          {(() => {
+            if (isEditMode) {
+              return (
+                <div
+                  className='relative z-30 h-full w-full'
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {(() => {
+                    switch (field.type.toLowerCase()) {
+                      case 'text':
+                        return (
+                          <TextFieldInput
+                            value={field.value || ''}
+                            onSave={handleSaveValue}
+                            onCancel={handleCancelEdit}
+                            placeholder={field.placeholder || 'Enter text...'}
+                            width={field.width}
+                            height={field.height}
+                          />
+                        );
+                      case 'checkbox':
+                        return (
+                          <CheckboxFieldInput
+                            value={field.value}
+                            onSave={handleSaveValue}
+                          />
+                        );
+                      case 'dropdown':
+                        return (
+                          <DropdownFieldInput
+                            value={field.value}
+                            onSave={handleSaveValue}
+                            options={field.options}
+                            placeholder={field.placeholder}
+                            width={field.width}
+                            height={field.height}
+                          />
+                        );
+                      case 'date':
+                        return (
+                          <DateFieldInput
+                            value={field.value}
+                            onSave={handleSaveValue}
+                            width={field.width}
+                            height={field.height}
+                          />
+                        );
+                      case 'signature':
+                      case 'stamp':
+                        return (
+                          <SignatureFieldInput
+                            value={field.value}
+                            onSave={handleSaveValue}
+                            onCancel={handleCancelEdit}
+                            type={
+                              field.type.toLowerCase() as 'signature' | 'stamp'
+                            }
+                          />
+                        );
+                      default:
+                        return null;
+                    }
+                  })()}
+                </div>
+              );
+            }
+
+            // Display Mode
+            switch (field.type.toLowerCase()) {
+              case 'checkbox':
+                return (
+                  <div className='flex h-full w-full items-center justify-center'>
+                    {field.value === 'true' || field.value === 'checked' ? (
+                      <Icons.checkSquare className='h-4 w-4' />
+                    ) : (
+                      <Icons.square className='h-4 w-4' />
+                    )}
+                  </div>
+                );
+              case 'signature':
+              case 'stamp':
+                return field.value ? (
+                  <img
+                    src={field.value}
+                    alt={field.type}
+                    className='h-full w-full object-contain'
+                  />
+                ) : (
+                  <>
+                    <FieldIcon className='h-3 w-3' />
+                    <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
+                      {field.type}
+                    </span>
+                  </>
+                );
+              default:
+                return (
+                  <>
+                    <FieldIcon className='h-3 w-3' />
+                    <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
+                      {field.value || field.label || field.type}
+                    </span>
+                  </>
+                );
+            }
+          })()}
           {field.recipientId && (
             <div
               className='absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white shadow-sm'
@@ -187,6 +332,7 @@ export function DraggableField({
           onAssign={handleAssign}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
+          onEdit={() => setIsEditMode(true)}
           onDropdownOpenChange={setIsDropdownOpen}
           assignedRecipientId={field.recipientId}
           documentId={documentId}

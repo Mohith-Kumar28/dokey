@@ -47,6 +47,8 @@ import {
   IconPencil,
   IconSelector,
   IconCircleDot,
+  IconSquare,
+  IconSquareCheck,
   IconProps
 } from '@tabler/icons-react';
 
@@ -61,6 +63,7 @@ export const Icons = {
   bolt: IconBolt,
   calendar: IconCalendar,
   check: IconCheck,
+  checkSquare: IconSquareCheck,
   chevronLeft: IconChevronLeft,
   chevronRight: IconChevronRight,
   chevronDown: IconChevronDown,
@@ -86,6 +89,7 @@ export const Icons = {
   search: IconSearch,
   settings: IconSettings,
   spinner: IconLoader2,
+  square: IconSquare,
   sun: IconSun,
   trash: IconTrash,
   upload: IconUpload,

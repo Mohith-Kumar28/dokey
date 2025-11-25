@@ -22,6 +22,7 @@ interface FieldToolbarProps {
   onDropdownOpenChange?: (open: boolean) => void;
   showCreateModal?: boolean;
   onCreateModalChange?: (show: boolean) => void;
+  onEdit?: () => void;
   onProperties?: () => void; // Keep onProperties as it's used later
 }
 
@@ -35,6 +36,7 @@ export function FieldToolbar({
   onDropdownOpenChange,
   showCreateModal = false,
   onCreateModalChange,
+  onEdit,
   onProperties // Keep onProperties in destructuring
 }: FieldToolbarProps) {
   const recipients = useEditorStore((state) => state.recipients) || [];
@@ -112,6 +114,19 @@ export function FieldToolbar({
       </Button>
 
       <div className='h-4 w-px bg-slate-600' />
+
+      <Button
+        variant='ghost'
+        size='icon'
+        className='h-8 w-8 text-white hover:bg-slate-700 hover:text-white'
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit?.();
+        }}
+        title='Edit value'
+      >
+        <Icons.pen className='h-4 w-4' />
+      </Button>
 
       <Button
         variant='ghost'
