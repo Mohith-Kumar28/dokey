@@ -291,7 +291,7 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
 
         if (active.data.current?.isField) {
           // Moving an existing field
-          const fieldId = active.data.current.fieldId;
+          const fieldId = active.data.current.field.id;
           const sourcePage = pages.find((p) =>
             p.fields.some((f) => f.id === fieldId)
           );
