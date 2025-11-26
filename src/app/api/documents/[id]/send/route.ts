@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth, getSession } from '@/auth/server';
 import { prisma } from '@/server/db/prisma';
+import { getEmailService } from '@/lib/email';
 
 export async function POST(
   req: Request,
@@ -20,13 +21,20 @@ export async function POST(
     // Verify document ownership
     const document = await prisma.document.findFirst({
       where: { id, orgId },
-      include: { recipients: true }
+      include: { recipients: true, owner: true }
     });
 
     if (!document) {
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
+      );
+    }
+
+    if (document.recipients.length === 0) {
+      return NextResponse.json(
+        { error: 'No recipients added to document' },
+        { status: 400 }
       );
     }
 
@@ -39,21 +47,72 @@ export async function POST(
       }
     });
 
-    let links: Record<string, string> = {};
-    if (deliveryMethod === 'link') {
-      const origin = req.headers.get('origin') || 'http://localhost:3000';
-      document.recipients.forEach((recipient) => {
-        // Generate unique link for each recipient
-        // In a real app, this should be a secure, signed token
-        links[recipient.id] =
-          `${origin}/sign/${id}?recipientId=${recipient.id}`;
-      });
+    const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const links: Record<string, string> = {};
+    const emailResults: Array<{
+      recipient: string;
+      success: boolean;
+      error?: string;
+    }> = [];
+
+    // Generate unique links for each recipient
+    for (const recipient of document.recipients) {
+      const signingLink = `${origin}/sign/${id}?recipientId=${recipient.id}`;
+      links[recipient.id] = signingLink;
+
+      // Send email if delivery method is email
+      if (deliveryMethod === 'email') {
+        try {
+          const emailService = getEmailService();
+          const result = await emailService.sendDocumentInvitation({
+            to: recipient.email,
+            recipientName: recipient.name,
+            documentTitle: title || document.title,
+            signingLink,
+            senderName: document.owner?.name || undefined
+          });
+
+          emailResults.push({
+            recipient: recipient.email,
+            success: result.success,
+            error: result.error
+          });
+
+          if (!result.success) {
+            console.error(
+              `[Send] Failed to send email to ${recipient.email}:`,
+              result.error
+            );
+          }
+        } catch (error) {
+          console.error(
+            `[Send] Exception sending email to ${recipient.email}:`,
+            error
+          );
+          emailResults.push({
+            recipient: recipient.email,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
     }
 
-    // TODO: Integrate actual email sending service (Resend, SendGrid, etc.)
     console.log(`[Send] Document ${id} sent via ${deliveryMethod}`);
 
-    return NextResponse.json({ ...updatedDoc, links });
+    // Check if all emails were sent successfully
+    const allEmailsSent = emailResults.every((r) => r.success);
+    const someEmailsFailed = emailResults.some((r) => !r.success);
+
+    return NextResponse.json({
+      ...updatedDoc,
+      links,
+      emailResults: deliveryMethod === 'email' ? emailResults : undefined,
+      warning:
+        someEmailsFailed && !allEmailsSent
+          ? 'Some emails failed to send'
+          : undefined
+    });
   } catch (error) {
     console.error('[Send] Error:', error);
     return NextResponse.json(
