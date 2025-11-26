@@ -39,6 +39,9 @@ interface PDFViewerClientProps {
   onPdfUploaded?: (url: string) => void;
   selectedRecipientId?: string;
   scale?: number;
+  readOnly?: boolean;
+  fieldValues?: Record<string, string>;
+  onFieldChange?: (fieldId: string, value: string) => void;
 }
 
 const pdfOptions = {
@@ -52,7 +55,10 @@ export function PDFViewerClient({
   pages,
   onPdfUploaded,
   selectedRecipientId = 'all',
-  scale = 1
+  scale = 1,
+  readOnly = false,
+  fieldValues,
+  onFieldChange
 }: PDFViewerClientProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(pdfUrl);
@@ -262,49 +268,51 @@ export function PDFViewerClient({
               id={`page_container_${pageNumber}`}
               className='group/page relative'
             >
-              {/* Page Operations Menu */}
-              <div className='absolute top-2 right-2 z-20 opacity-0 transition-opacity group-hover/page:opacity-100'>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='secondary'
-                      size='icon'
-                      className='h-8 w-8 shadow-md'
-                    >
-                      <Icons.ellipsis className='h-4 w-4' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end'>
-                    <DropdownMenuItem>
-                      <Icons.settings className='mr-2 h-4 w-4' />
-                      Page properties
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        useEditorStore.getState().duplicatePage(pageNumber);
-                        toast.success('Page duplicated');
-                      }}
-                    >
-                      <Icons.page className='mr-2 h-4 w-4' />
-                      Duplicate page
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (pages.length > 1) {
-                          useEditorStore.getState().deletePage(pageNumber);
-                          toast.success('Page deleted');
-                        } else {
-                          toast.error('Cannot delete the last page');
-                        }
-                      }}
-                      className='text-destructive'
-                    >
-                      <Icons.trash className='mr-2 h-4 w-4' />
-                      Delete page
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              {/* Page Operations Menu - Only show in edit mode */}
+              {!readOnly && (
+                <div className='absolute top-2 right-2 z-20 opacity-0 transition-opacity group-hover/page:opacity-100'>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='secondary'
+                        size='icon'
+                        className='h-8 w-8 shadow-md'
+                      >
+                        <Icons.ellipsis className='h-4 w-4' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end'>
+                      <DropdownMenuItem>
+                        <Icons.settings className='mr-2 h-4 w-4' />
+                        Page properties
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          useEditorStore.getState().duplicatePage(pageNumber);
+                          toast.success('Page duplicated');
+                        }}
+                      >
+                        <Icons.page className='mr-2 h-4 w-4' />
+                        Duplicate page
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (pages.length > 1) {
+                            useEditorStore.getState().deletePage(pageNumber);
+                            toast.success('Page deleted');
+                          } else {
+                            toast.error('Cannot delete the last page');
+                          }
+                        }}
+                        className='text-destructive'
+                      >
+                        <Icons.trash className='mr-2 h-4 w-4' />
+                        Delete page
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
 
               <DroppablePageWrapper
                 key={`page_${pageNumber}`}
@@ -314,6 +322,9 @@ export function PDFViewerClient({
                 documentId={documentId}
                 selectedRecipientId={selectedRecipientId}
                 scale={scale}
+                readOnly={readOnly}
+                fieldValues={fieldValues}
+                onFieldChange={onFieldChange}
               >
                 <Page
                   pageNumber={pdfPageIndex}
@@ -324,28 +335,30 @@ export function PDFViewerClient({
                 />
               </DroppablePageWrapper>
 
-              {/* Insert Page Divider */}
-              <div className='absolute right-0 -bottom-4 left-0 z-10 flex h-8 items-center justify-center opacity-0 transition-opacity group-hover/page:opacity-100'>
-                <div className='bg-primary/20 absolute h-px w-full' />
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='bg-background border-primary text-primary hover:bg-primary hover:text-primary-foreground relative z-10 h-6 w-6 rounded-full p-0 shadow-sm'
-                  onClick={() => {
-                    const newPage = {
-                      id: `temp_page_${Date.now()}`,
-                      pageNumber: pageNumber + 1,
-                      width: 800,
-                      height: 1100,
-                      fields: []
-                    };
-                    useEditorStore.getState().addPage(pageNumber, newPage);
-                  }}
-                  title='Insert page here'
-                >
-                  <Icons.add className='h-4 w-4' />
-                </Button>
-              </div>
+              {/* Insert Page Divider - Only show in edit mode */}
+              {!readOnly && (
+                <div className='absolute right-0 -bottom-4 left-0 z-10 flex h-8 items-center justify-center opacity-0 transition-opacity group-hover/page:opacity-100'>
+                  <div className='bg-primary/20 absolute h-px w-full' />
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='bg-background border-primary text-primary hover:bg-primary hover:text-primary-foreground relative z-10 h-6 w-6 rounded-full p-0 shadow-sm'
+                    onClick={() => {
+                      const newPage = {
+                        id: `temp_page_${Date.now()}`,
+                        pageNumber: pageNumber + 1,
+                        width: 800,
+                        height: 1100,
+                        fields: []
+                      };
+                      useEditorStore.getState().addPage(pageNumber, newPage);
+                    }}
+                    title='Insert page here'
+                  >
+                    <Icons.add className='h-4 w-4' />
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })}

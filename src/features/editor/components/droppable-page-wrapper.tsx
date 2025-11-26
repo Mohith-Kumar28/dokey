@@ -3,6 +3,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { DraggableField } from './draggable-field';
+import { SigningField } from './signing-field';
 
 interface DroppablePageWrapperProps {
   pageNumber: number;
@@ -12,6 +13,9 @@ interface DroppablePageWrapperProps {
   documentId: string;
   selectedRecipientId?: string; // 'all' or specific recipient ID
   scale?: number;
+  readOnly?: boolean;
+  fieldValues?: Record<string, string>;
+  onFieldChange?: (fieldId: string, value: string) => void;
 }
 
 export function DroppablePageWrapper({
@@ -21,7 +25,10 @@ export function DroppablePageWrapper({
   fields = [],
   documentId,
   selectedRecipientId = 'all',
-  scale = 1
+  scale = 1,
+  readOnly = false,
+  fieldValues,
+  onFieldChange
 }: DroppablePageWrapperProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `page-${pageNumber}`,
@@ -49,15 +56,25 @@ export function DroppablePageWrapper({
       {children}
 
       {/* Render Fields */}
-      {filteredFields.map((field) => (
-        <DraggableField
-          key={field.id}
-          field={field}
-          pageNumber={pageNumber}
-          documentId={documentId}
-          scale={scale}
-        />
-      ))}
+      {filteredFields.map((field) =>
+        readOnly ? (
+          <SigningField
+            key={field.id}
+            field={field}
+            scale={scale}
+            value={fieldValues?.[field.id]}
+            onChange={(value) => onFieldChange?.(field.id, value)}
+          />
+        ) : (
+          <DraggableField
+            key={field.id}
+            field={field}
+            pageNumber={pageNumber}
+            documentId={documentId}
+            scale={scale}
+          />
+        )
+      )}
 
       {/* Overlay for drop indication */}
       {isOver && (
