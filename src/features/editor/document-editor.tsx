@@ -61,9 +61,14 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   const { pages, setDocument, addField, setSaving, isSaving, selectedFieldId } =
     useEditorStore();
 
+  // Flag to prevent save when loading from server
+  const isLoadingFromServerRef = useRef(false);
+
   // Initialize store when document loads
   useEffect(() => {
     if (docQuery.data) {
+      isLoadingFromServerRef.current = true; // Prevent save on refetch
+
       let storePages;
 
       if (docQuery.data.pages && docQuery.data.pages.length > 0) {
@@ -116,6 +121,11 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
       }
 
       setDocument(storePages, docQuery.data.recipients || []);
+
+      // Reset flag after state update
+      setTimeout(() => {
+        isLoadingFromServerRef.current = false;
+      }, 100);
     }
   }, [docQuery.data, setDocument]);
 
@@ -204,22 +214,36 @@ export function DocumentEditor({ id }: DocumentEditorProps) {
   }, [setSaving, saveMutation]); // Only recreate if dependencies change
 
   // Auto-save subscription
+  const previousPagesRef = useRef<any>(undefined);
+
   useEffect(() => {
     const unsub = useEditorStore.subscribe(
       (state) => state.pages,
       (pages) => {
-        // Don't trigger save if we're just updating IDs internally
-        if (isUpdatingIdsRef.current) {
+        // Skip if same pages reference (no actual change)
+        if (previousPagesRef.current === pages) {
           return;
         }
+
+        // Don't trigger save if loading from server
+        if (isLoadingFromServerRef.current) {
+          previousPagesRef.current = pages; // Update ref even when skipping
+          return;
+        }
+        // Don't trigger save if we're just updating IDs internally
+        if (isUpdatingIdsRef.current) {
+          previousPagesRef.current = pages; // Update ref even when skipping
+          return;
+        }
+
+        previousPagesRef.current = pages;
         debouncedSave(pages);
       }
     );
     return () => {
       unsub();
-      debouncedSave.cancel();
     };
-  }, [debouncedSave]);
+  }, []); // Empty deps - subscription stays stable
 
   // Keyboard shortcuts
   useEffect(() => {
