@@ -37,6 +37,24 @@ export async function POST(
     return new NextResponse('Not Found', { status: 404 });
   }
 
+  // Check for duplicate email (case-insensitive) for this document
+  const existingRecipient = await prisma.recipient.findFirst({
+    where: {
+      docId: id,
+      email: {
+        equals: body.data.email,
+        mode: 'insensitive'
+      }
+    }
+  });
+
+  if (existingRecipient) {
+    return NextResponse.json(
+      { error: 'A recipient with this email already exists for this document' },
+      { status: 409 } // Conflict
+    );
+  }
+
   // Create single recipient
   const recipient = await prisma.recipient.create({
     data: {

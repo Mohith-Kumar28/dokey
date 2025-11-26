@@ -37,6 +37,8 @@ model Recipient {
   deliveryMethod String   @default("email") // Email, SMS, Link
   createdAt      DateTime @default(now())
   fields         Field[]
+
+  @@unique([docId, email])
 }
 
 model DocumentPage {

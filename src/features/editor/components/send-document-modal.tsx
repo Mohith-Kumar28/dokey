@@ -15,6 +15,8 @@ import {
 } from '@/features/documents/queries';
 import { toast } from 'sonner';
 import { Recipient } from '../store/use-editor-store';
+import { getErrorMessage } from '@/lib/error-utils';
+import { CreateRecipientModal } from './create-recipient-modal';
 
 interface SendDocumentModalProps {
   open: boolean;
@@ -34,7 +36,6 @@ export function SendDocumentModal({
   mode
 }: SendDocumentModalProps) {
   const sendMutation = useSendDocument(documentId);
-  const createRecipientMutation = useCreateRecipient(documentId);
 
   const [title, setTitle] = useState(documentTitle);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -43,10 +44,9 @@ export function SendDocumentModal({
   );
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Add Recipient State
-  const [isAddingRecipient, setIsAddingRecipient] = useState(false);
-  const [newRecipientName, setNewRecipientName] = useState('');
-  const [newRecipientEmail, setNewRecipientEmail] = useState('');
+  // Add Recipient Modal State
+  const [isCreateRecipientModalOpen, setIsCreateRecipientModalOpen] =
+    useState(false);
 
   // Reset state when opening
   useEffect(() => {
@@ -55,9 +55,7 @@ export function SendDocumentModal({
       setIsSuccess(false);
       setGeneratedLinks({});
       setIsGenerating(false);
-      setIsAddingRecipient(false);
-      setNewRecipientName('');
-      setNewRecipientEmail('');
+      setIsCreateRecipientModalOpen(false);
     }
   }, [open, documentTitle]);
 
@@ -70,7 +68,7 @@ export function SendDocumentModal({
       setIsSuccess(true);
       toast.success('Document sent successfully');
     } catch (error) {
-      toast.error('Failed to send document');
+      toast.error(getErrorMessage(error, 'Failed to send document'));
     }
   };
 
@@ -86,28 +84,9 @@ export function SendDocumentModal({
       }
       toast.success('Links generated');
     } catch (error) {
-      toast.error('Failed to generate links');
+      toast.error(getErrorMessage(error, 'Failed to generate links'));
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const handleAddRecipient = async () => {
-    if (!newRecipientName || !newRecipientEmail) return;
-
-    try {
-      await createRecipientMutation.mutateAsync({
-        name: newRecipientName,
-        email: newRecipientEmail,
-        role: 'signer',
-        deliveryMethod: 'email'
-      });
-      setIsAddingRecipient(false);
-      setNewRecipientName('');
-      setNewRecipientEmail('');
-      toast.success('Recipient added');
-    } catch (error) {
-      toast.error('Failed to add recipient');
     }
   };
 
@@ -200,60 +179,14 @@ export function SendDocumentModal({
                 </div>
               ))}
 
-              {isAddingRecipient ? (
-                <div className='bg-muted/20 space-y-3 rounded-md border p-3'>
-                  <div className='grid grid-cols-2 gap-3'>
-                    <div className='space-y-1'>
-                      <label className='text-xs font-medium'>Name</label>
-                      <input
-                        className='border-input bg-background flex h-8 w-full rounded-md border px-2 py-1 text-sm'
-                        placeholder='John Doe'
-                        value={newRecipientName}
-                        onChange={(e) => setNewRecipientName(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-                    <div className='space-y-1'>
-                      <label className='text-xs font-medium'>Email</label>
-                      <input
-                        className='border-input bg-background flex h-8 w-full rounded-md border px-2 py-1 text-sm'
-                        placeholder='john@example.com'
-                        value={newRecipientEmail}
-                        onChange={(e) => setNewRecipientEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className='flex justify-end gap-2'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => setIsAddingRecipient(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size='sm'
-                      onClick={handleAddRecipient}
-                      disabled={
-                        !newRecipientName ||
-                        !newRecipientEmail ||
-                        createRecipientMutation.isPending
-                      }
-                    >
-                      {createRecipientMutation.isPending ? 'Adding...' : 'Add'}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant='ghost'
-                  className='text-muted-foreground hover:text-foreground pl-0 hover:bg-transparent'
-                  onClick={() => setIsAddingRecipient(true)}
-                >
-                  <Icons.add className='mr-2 h-4 w-4' />
-                  Add recipient
-                </Button>
-              )}
+              <Button
+                variant='ghost'
+                className='text-muted-foreground hover:text-foreground pl-0 hover:bg-transparent'
+                onClick={() => setIsCreateRecipientModalOpen(true)}
+              >
+                <Icons.add className='mr-2 h-4 w-4' />
+                Add recipient
+              </Button>
             </div>
           </div>
         ) : (
@@ -359,6 +292,16 @@ export function SendDocumentModal({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Create Recipient Modal */}
+      <CreateRecipientModal
+        documentId={documentId}
+        open={isCreateRecipientModalOpen}
+        onOpenChange={setIsCreateRecipientModalOpen}
+        onCreated={() => {
+          // Modal handles the success message and closing
+        }}
+      />
     </Dialog>
   );
 }

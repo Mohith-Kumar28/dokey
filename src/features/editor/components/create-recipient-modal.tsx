@@ -14,6 +14,7 @@ import { Icons } from '@/components/icons';
 import { useCreateRecipient } from '@/features/documents/queries';
 import { useEditorStore } from '../store/use-editor-store';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/error-utils';
 
 interface CreateRecipientModalProps {
   documentId: string;
@@ -67,7 +68,16 @@ export function CreateRecipientModal({
       setShowMoreFields(false);
       onOpenChange(false);
     } catch (error) {
-      toast.error('Failed to create recipient');
+      console.log('[CreateRecipient] Error object:', error);
+      console.log(
+        '[CreateRecipient] Error response:',
+        (error as any)?.response
+      );
+      console.log(
+        '[CreateRecipient] Error response data:',
+        (error as any)?.response?.data
+      );
+      toast.error(getErrorMessage(error, 'Failed to create recipient'));
     }
   };
 
