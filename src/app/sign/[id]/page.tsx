@@ -135,8 +135,8 @@ export default function SignDocumentPage() {
       <div className='flex h-screen flex-col items-center justify-center'>
         <h1 className='text-2xl font-bold'>Document not found</h1>
         <p className='text-muted-foreground mt-2'>
-          The document you're looking for doesn't exist or you don't have
-          access.
+          The document you&apos;re looking for doesn&apos;t exist or you
+          don&apos;t have access.
         </p>
       </div>
     );
