@@ -46,33 +46,33 @@ export default function SignDocumentPage() {
       return;
     }
 
+    const fetchDocument = async () => {
+      try {
+        const res = await http.get(
+          `/api/sign/${documentId}?recipientId=${recipientId}`
+        );
+        setDocument(res.data);
+
+        // Initialize field values
+        const initialValues: Record<string, string> = {};
+        res.data.pages.forEach((page: any) => {
+          page.fields.forEach((field: any) => {
+            if (field.value) {
+              initialValues[field.id] = field.value;
+            }
+          });
+        });
+        setFieldValues(initialValues);
+      } catch (error) {
+        console.error('Failed to load document:', error);
+        toast.error('Failed to load document');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchDocument();
   }, [documentId, recipientId]);
-
-  const fetchDocument = async () => {
-    try {
-      const res = await http.get(
-        `/api/sign/${documentId}?recipientId=${recipientId}`
-      );
-      setDocument(res.data);
-
-      // Initialize field values
-      const initialValues: Record<string, string> = {};
-      res.data.pages.forEach((page: any) => {
-        page.fields.forEach((field: any) => {
-          if (field.value) {
-            initialValues[field.id] = field.value;
-          }
-        });
-      });
-      setFieldValues(initialValues);
-    } catch (error) {
-      console.error('Failed to load document:', error);
-      toast.error('Failed to load document');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setFieldValues((prev) => ({ ...prev, [fieldId]: value }));
