@@ -29,6 +29,14 @@ export async function PATCH(
       );
     }
 
+    // Check if recipient has already submitted - prevent edits
+    if (recipient.submittedAt) {
+      return NextResponse.json(
+        { error: 'Cannot edit fields after submission' },
+        { status: 403 }
+      );
+    }
+
     // Update fields in a transaction
     await prisma.$transaction(
       Object.entries(fieldValues).map(([fieldId, value]) =>

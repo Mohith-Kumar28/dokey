@@ -34,6 +34,7 @@ interface SigningFieldProps {
   value?: string;
   onChange?: (value: string) => void;
   onInteract?: () => void; // For signature clicks
+  disabled?: boolean;
 }
 
 export function SigningField({
@@ -41,7 +42,8 @@ export function SigningField({
   scale,
   value,
   onChange,
-  onInteract
+  onInteract,
+  disabled = false
 }: SigningFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -60,6 +62,8 @@ export function SigningField({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (disabled) return;
 
     // For signature/stamp, we trigger the external interaction handler (to open pad)
     if (field.type === 'signature' || field.type === 'stamp') {

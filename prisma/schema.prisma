@@ -35,6 +35,7 @@ model Recipient {
   role           String   @default("signer") // e.g. Sender, Client, Approver
   color          String   @default("#3b82f6") // Color for UI identification
   deliveryMethod String   @default("email") // Email, SMS, Link
+  submittedAt    DateTime? // When recipient completed and submitted their fields
   createdAt      DateTime @default(now())
   fields         Field[]
 

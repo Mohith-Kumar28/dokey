@@ -40,6 +40,7 @@ interface PDFViewerClientProps {
   selectedRecipientId?: string;
   scale?: number;
   readOnly?: boolean;
+  disabled?: boolean;
   fieldValues?: Record<string, string>;
   onFieldChange?: (fieldId: string, value: string) => void;
   onSignatureClick?: (fieldId: string) => void;
@@ -58,6 +59,7 @@ export function PDFViewerClient({
   selectedRecipientId = 'all',
   scale = 1,
   readOnly = false,
+  disabled = false,
   fieldValues,
   onFieldChange,
   onSignatureClick
@@ -328,6 +330,7 @@ export function PDFViewerClient({
                   selectedRecipientId={selectedRecipientId}
                   scale={scale}
                   readOnly={readOnly}
+                  disabled={disabled}
                   fieldValues={fieldValues}
                   onFieldChange={onFieldChange}
                   onSignatureClick={onSignatureClick}

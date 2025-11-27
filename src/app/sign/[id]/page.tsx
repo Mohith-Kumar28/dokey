@@ -60,6 +60,7 @@ export default function SignDocumentPage() {
   const [document, setDocument] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [currentSignatureField, setCurrentSignatureField] = useState<
@@ -84,6 +85,12 @@ export default function SignDocumentPage() {
           `/api/sign/${documentId}?recipientId=${recipientId}`
         );
         setDocument(res.data);
+
+        // Check if recipient has already submitted
+        setIsSubmitted(
+          res.data.recipient?.submittedAt !== null &&
+            res.data.recipient?.submittedAt !== undefined
+        );
 
         const initialValues: Record<string, string> = {};
         let foundSignature = null;
@@ -214,6 +221,8 @@ export default function SignDocumentPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitted) return;
+
     if (!progressStats.allComplete) {
       toast.error('Please fill all required fields');
       if (progressStats.nextFieldId) {
@@ -224,15 +233,23 @@ export default function SignDocumentPage() {
 
     setSubmitting(true);
     try {
-      await http.post(`/api/sign/${documentId}/submit`, {
+      const response = await http.post(`/api/sign/${documentId}/submit`, {
         recipientId,
         fieldValues
       });
 
-      toast.success('Document signed successfully!');
-    } catch (error) {
-      console.error('Failed to submit:', error);
-      toast.error('Failed to submit signature');
+      if (response.data.success) {
+        setIsSubmitted(true);
+        toast.success('Document submitted successfully!');
+        // Optionally redirect to a success page
+        // router.push(`/api/sign/${documentId}/success`);
+      }
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      toast.error(
+        error.response?.data?.error ||
+          'Failed to submit document. Please try again.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -322,79 +339,99 @@ export default function SignDocumentPage() {
     <TooltipProvider>
       <div className='bg-background flex h-screen flex-col'>
         {/* Header with Progress and Actions */}
-        <header className='bg-card border-b'>
-          <div className='flex h-16 items-center gap-4 px-4 sm:px-6'>
+        <header className='bg-card border-b shadow-sm'>
+          <div className='flex h-14 items-center gap-6 px-6'>
             {/* Document info */}
-            <div className='flex min-w-0 items-center gap-3'>
-              <Icons.file className='text-muted-foreground h-5 w-5 flex-shrink-0' />
+            <div className='flex min-w-0 items-center gap-2.5'>
+              <div className='bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg'>
+                <Icons.file className='text-primary h-4 w-4' />
+              </div>
               <div className='min-w-0'>
-                <h1 className='max-w-[200px] truncate text-sm font-semibold'>
+                <h1 className='max-w-[200px] truncate text-sm font-medium'>
                   {document.title}
                 </h1>
                 {isSaving && (
-                  <span className='text-primary flex items-center gap-1 text-xs'>
+                  <span className='text-muted-foreground flex items-center gap-1.5 text-xs'>
                     <Icons.spinner className='h-3 w-3 animate-spin' />
-                    Saving...
+                    Saving changes
                   </span>
                 )}
               </div>
             </div>
 
             {/* Progress indicator */}
-            <div className='hidden max-w-md flex-1 items-center gap-3 md:flex'>
-              <Progress value={progressStats.percent} className='h-2 flex-1' />
-              <span className='text-muted-foreground text-sm whitespace-nowrap'>
-                {progressStats.completed}/{progressStats.total}
-              </span>
-              <Badge
-                variant={progressStats.allComplete ? 'default' : 'secondary'}
-                className='whitespace-nowrap'
-              >
-                {progressStats.percent}%
-              </Badge>
+            <div className='hidden flex-1 items-center gap-3 md:flex'>
+              <div className='flex flex-1 items-center gap-2.5'>
+                <Progress
+                  value={progressStats.percent}
+                  className='h-1.5 max-w-xs flex-1'
+                />
+                <div className='flex items-center gap-2'>
+                  <span className='text-foreground text-xs font-medium'>
+                    {progressStats.completed}/{progressStats.total}
+                  </span>
+                  <Badge
+                    variant={
+                      progressStats.allComplete ? 'default' : 'secondary'
+                    }
+                    className='px-2 py-0.5 text-[10px] font-semibold'
+                  >
+                    {progressStats.percent}%
+                  </Badge>
+                </div>
+              </div>
             </div>
 
             {/* Actions */}
             <div className='ml-auto flex items-center gap-2'>
-              {progressStats.completed > 0 && (
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => setShowResetDialog(true)}
-                  className='text-destructive hover:text-destructive hover:bg-destructive/10'
-                >
-                  <Icons.trash className='h-4 w-4' />
-                  <span className='ml-2 hidden sm:inline'>Reset</span>
-                </Button>
+              {isSubmitted && <Badge variant='default'>Submitted</Badge>}
+
+              {!isSubmitted && progressStats.completed > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => setShowResetDialog(true)}
+                      className='text-destructive hover:bg-destructive/10 h-8 gap-2 px-3'
+                    >
+                      <Icons.trash className='h-4 w-4' />
+                      <span className='hidden sm:inline'>Reset</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='bottom'>
+                    Reset all fields
+                  </TooltipContent>
+                </Tooltip>
               )}
 
-              {!progressStats.allComplete && progressStats.nextFieldId ? (
+              {!isSubmitted && !progressStats.allComplete && (
                 <Button
                   onClick={() => scrollToField(progressStats.nextFieldId!)}
                   size='sm'
+                  className='h-8 gap-1.5'
                 >
-                  <span className='hidden sm:inline'>Next Field</span>
-                  <span className='sm:hidden'>Next</span>
-                  <Icons.chevronDown className='ml-2 h-4 w-4' />
+                  <span>Next Field</span>
+                  <Icons.chevronDown className='h-3.5 w-3.5' />
                 </Button>
-              ) : (
+              )}
+
+              {!isSubmitted && progressStats.allComplete && (
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || !progressStats.allComplete}
+                  disabled={submitting}
                   size='sm'
-                  className='min-w-[120px]'
+                  className='h-8 min-w-[130px] gap-1.5'
                 >
                   {submitting ? (
                     <>
-                      <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
-                      <span className='hidden sm:inline'>Submitting...</span>
-                      <span className='sm:hidden'>...</span>
+                      <Icons.spinner className='h-3.5 w-3.5 animate-spin' />
+                      <span>Submitting...</span>
                     </>
                   ) : (
                     <>
-                      <span className='hidden sm:inline'>Submit Document</span>
-                      <span className='sm:hidden'>Submit</span>
-                      <Icons.check className='ml-2 h-4 w-4' />
+                      <span>Submit Document</span>
+                      <Icons.check className='h-3.5 w-3.5' />
                     </>
                   )}
                 </Button>
@@ -418,7 +455,9 @@ export default function SignDocumentPage() {
                       pdfUrl={document.pdfUrl}
                       documentId={documentId}
                       pages={document.pages}
+                      scale={1}
                       readOnly={true}
+                      disabled={isSubmitted}
                       fieldValues={fieldValues}
                       onFieldChange={(id, val) => {
                         if (val === 'INTERACT') {
@@ -437,21 +476,24 @@ export default function SignDocumentPage() {
 
           {/* Field List Sidebar */}
           {showFieldList && (
-            <div className='bg-card hidden w-80 border-l lg:block'>
+            <div className='bg-card hidden w-80 border-l shadow-sm lg:block'>
               <div className='flex h-full flex-col'>
-                <div className='flex items-center justify-between border-b p-4'>
+                <div className='bg-muted/30 flex items-center justify-between border-b px-4 py-3'>
                   <div>
-                    <h2 className='font-semibold'>Fields</h2>
-                    <p className='text-muted-foreground text-sm'>
-                      Click to navigate
+                    <h2 className='text-sm font-semibold'>Document Fields</h2>
+                    <p className='text-muted-foreground text-xs'>
+                      {isSubmitted
+                        ? 'Document submitted'
+                        : `${progressStats.completed} of ${progressStats.total} completed`}
                     </p>
                   </div>
                   <Button
                     variant='ghost'
                     size='icon'
                     onClick={() => setShowFieldList(false)}
+                    className='h-7 w-7'
                   >
-                    <Icons.close className='h-4 w-4' />
+                    <Icons.close className='h-3.5 w-3.5' />
                   </Button>
                 </div>
 
@@ -472,55 +514,68 @@ export default function SignDocumentPage() {
                             key={field.id}
                             onClick={() => scrollToField(field.id)}
                             className={cn(
-                              'hover:border-primary/50 w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:shadow-md',
-                              field.isComplete && 'bg-primary/10 border-primary'
+                              'relative w-full cursor-pointer rounded-lg border p-3 text-left transition-all',
+                              field.isComplete
+                                ? 'bg-primary/5 border-primary/20 hover:border-primary/40 hover:bg-primary/10'
+                                : 'border-border hover:border-primary/30 hover:bg-accent/50'
                             )}
                           >
-                            <div className='flex items-start justify-between gap-2'>
-                              <div className='flex min-w-0 flex-1 items-start gap-2'>
+                            <div className='flex items-start gap-2.5'>
+                              <div
+                                className={cn(
+                                  'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md',
+                                  field.isComplete
+                                    ? 'bg-primary/10'
+                                    : 'bg-muted'
+                                )}
+                              >
                                 <FieldIcon
                                   className={cn(
-                                    'mt-0.5 h-4 w-4 flex-shrink-0',
+                                    'h-3.5 w-3.5',
                                     field.isComplete
                                       ? 'text-primary'
                                       : 'text-muted-foreground'
                                   )}
                                 />
-                                <div className='min-w-0 flex-1'>
-                                  <p className='truncate text-sm font-medium'>
-                                    {field.label || field.config.label}
-                                  </p>
-                                  <p className='text-muted-foreground text-xs'>
-                                    Page {field.pageNumber}
-                                    {field.required && ' • Required'}
-                                  </p>
+                              </div>
+
+                              <div className='min-w-0 flex-1'>
+                                <p className='truncate text-sm leading-tight font-medium'>
+                                  {field.label || field.config.label}
+                                </p>
+                                <div className='text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs'>
+                                  <span>Page {field.pageNumber}</span>
+                                  {field.required && (
+                                    <>
+                                      <span>•</span>
+                                      <span>Required</span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
 
-                              <div className='flex flex-shrink-0 items-center gap-1'>
-                                {field.isComplete ? (
-                                  <>
-                                    <Button
-                                      variant='ghost'
-                                      size='icon'
-                                      className='h-6 w-6'
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleFieldReset(field.id);
-                                      }}
-                                    >
-                                      <Icons.close className='h-3 w-3' />
-                                    </Button>
-                                    <Icons.check className='text-primary h-5 w-5' />
-                                  </>
-                                ) : field.required ? (
-                                  <Badge
-                                    variant='secondary'
-                                    className='text-xs'
-                                  >
-                                    Required
-                                  </Badge>
-                                ) : null}
+                              {/* Status indicator with reset */}
+                              <div className='flex flex-shrink-0 items-center gap-1.5'>
+                                {!isSubmitted && field.isComplete && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant='ghost'
+                                        size='icon'
+                                        className='text-destructive hover:text-destructive hover:bg-destructive/10 h-6 w-6 rounded-md'
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleFieldReset(field.id);
+                                        }}
+                                      >
+                                        <Icons.trash className='h-3.5 w-3.5' />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side='left'>
+                                      Clear this field
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </div>
                             </div>
                           </div>

@@ -37,6 +37,14 @@ export async function POST(
       );
     }
 
+    // Check if recipient has already submitted - prevent double submission
+    if (recipient.submittedAt) {
+      return NextResponse.json(
+        { error: 'Document has already been submitted' },
+        { status: 400 }
+      );
+    }
+
     // Update field values
     const updatePromises = Object.entries(fieldValues).map(
       ([fieldId, value]) => {
@@ -69,8 +77,29 @@ export async function POST(
       });
     }
 
-    // TODO: Check if all recipients have completed their fields
-    // If yes, update document status to 'COMPLETED'
+    // Mark recipient as submitted
+    await prisma.recipient.update({
+      where: { id: recipientId },
+      data: { submittedAt: new Date() }
+    });
+
+    // Check if all recipients have submitted
+    const updatedDocument = await prisma.document.findUnique({
+      where: { id },
+      include: { recipients: true }
+    });
+
+    const allRecipientsSubmitted = updatedDocument!.recipients.every(
+      (r) => r.submittedAt !== null
+    );
+
+    // If all recipients submitted, update document status to 'completed'
+    if (allRecipientsSubmitted) {
+      await prisma.document.update({
+        where: { id },
+        data: { status: 'completed' }
+      });
+    }
 
     return NextResponse.json({
       success: true,

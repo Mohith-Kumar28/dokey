@@ -14,6 +14,7 @@ interface DroppablePageWrapperProps {
   selectedRecipientId?: string; // 'all' or specific recipient ID
   scale?: number;
   readOnly?: boolean;
+  disabled?: boolean;
   fieldValues?: Record<string, string>;
   onFieldChange?: (fieldId: string, value: string) => void;
   onSignatureClick?: (fieldId: string) => void;
@@ -28,6 +29,7 @@ export function DroppablePageWrapper({
   selectedRecipientId = 'all',
   scale = 1,
   readOnly = false,
+  disabled = false,
   fieldValues,
   onFieldChange,
   onSignatureClick
@@ -67,6 +69,7 @@ export function DroppablePageWrapper({
             value={fieldValues?.[field.id]}
             onChange={(value) => onFieldChange?.(field.id, value)}
             onInteract={() => onSignatureClick?.(field.id)}
+            disabled={disabled}
           />
         ) : (
           <DraggableField

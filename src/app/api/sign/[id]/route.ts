@@ -63,7 +63,8 @@ export async function GET(
         id: recipient.id,
         name: recipient.name,
         email: recipient.email,
-        role: recipient.role
+        role: recipient.role,
+        submittedAt: recipient.submittedAt
       },
       pages: pagesWithRecipientFields
     });
