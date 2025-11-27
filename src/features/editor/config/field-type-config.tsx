@@ -7,6 +7,12 @@ export interface FieldTypeConfig {
   bgColor: string;
   borderColor: string;
   textColor: string;
+  // Render function for display mode (returns JSX)
+  renderDisplay?: (params: {
+    value?: string;
+    field: any;
+    FieldIcon: any;
+  }) => React.ReactNode;
 }
 
 export const FIELD_TYPE_CONFIG: Record<string, FieldTypeConfig> = {
@@ -24,7 +30,41 @@ export const FIELD_TYPE_CONFIG: Record<string, FieldTypeConfig> = {
     color: 'purple',
     bgColor: 'bg-purple-50/80',
     borderColor: 'border-purple-500',
-    textColor: 'text-purple-700'
+    textColor: 'text-purple-700',
+    renderDisplay: ({ value, FieldIcon }) =>
+      value ? (
+        <img
+          src={value}
+          alt='signature'
+          className='h-full w-full object-contain'
+        />
+      ) : (
+        <>
+          <FieldIcon className='h-3 w-3' />
+          <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
+            Sign
+          </span>
+        </>
+      )
+  },
+  stamp: {
+    label: 'Stamp',
+    icon: 'stamp',
+    color: 'red',
+    bgColor: 'bg-red-50/80',
+    borderColor: 'border-red-500',
+    textColor: 'text-red-700',
+    renderDisplay: ({ value, FieldIcon }) =>
+      value ? (
+        <img src={value} alt='stamp' className='h-full w-full object-contain' />
+      ) : (
+        <>
+          <FieldIcon className='h-3 w-3' />
+          <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
+            Stamp
+          </span>
+        </>
+      )
   },
   initials: {
     label: 'Initials',
@@ -48,7 +88,16 @@ export const FIELD_TYPE_CONFIG: Record<string, FieldTypeConfig> = {
     color: 'teal',
     bgColor: 'bg-teal-50/80',
     borderColor: 'border-teal-500',
-    textColor: 'text-teal-700'
+    textColor: 'text-teal-700',
+    renderDisplay: ({ value }) => (
+      <div className='flex h-full w-full items-center justify-center'>
+        {value === 'true' || value === 'checked' ? (
+          <Icons.checkSquare className='h-4 w-4' />
+        ) : (
+          <Icons.square className='h-4 w-4' />
+        )}
+      </div>
+    )
   },
   dropdown: {
     label: 'Dropdown',

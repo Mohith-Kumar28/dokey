@@ -24,17 +24,24 @@ interface SigningFieldProps {
     placeholder?: string;
     defaultValue?: string;
     options?: string[];
+    properties?: {
+      placeholder?: string;
+      defaultValue?: string;
+      options?: string[];
+    };
   };
   scale: number;
   value?: string;
   onChange?: (value: string) => void;
+  onInteract?: () => void; // For signature clicks
 }
 
 export function SigningField({
   field,
   scale,
   value,
-  onChange
+  onChange,
+  onInteract
 }: SigningFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -51,7 +58,15 @@ export function SigningField({
     setIsEditing(false);
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // For signature/stamp, we trigger the external interaction handler (to open pad)
+    if (field.type === 'signature' || field.type === 'stamp') {
+      onInteract?.();
+      return;
+    }
+
     setIsEditing(true);
   };
 
@@ -59,6 +74,7 @@ export function SigningField({
   if (isEditing) {
     return (
       <div
+        id={`field-${field.id}`}
         style={{
           left: field.x * scale,
           top: field.y * scale,
@@ -87,8 +103,10 @@ export function SigningField({
                 <DropdownFieldInput
                   value={value}
                   onSave={handleSave}
-                  options={field.options}
-                  placeholder={field.placeholder}
+                  options={field.properties?.options || field.options}
+                  placeholder={
+                    field.properties?.placeholder || field.placeholder
+                  }
                   width={field.width}
                   height={field.height}
                 />
@@ -102,16 +120,7 @@ export function SigningField({
                   height={field.height}
                 />
               );
-            case 'signature':
-            case 'stamp':
-              return (
-                <SignatureFieldInput
-                  value={value}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  type={field.type.toLowerCase() as 'signature' | 'stamp'}
-                />
-              );
+            // Signature/Stamp handled by click, but if we somehow get here:
             default:
               return null;
           }
@@ -123,6 +132,7 @@ export function SigningField({
   // Display Mode (Interactive)
   return (
     <div
+      id={`field-${field.id}`}
       onClick={handleClick}
       style={{
         left: field.x * scale,
@@ -133,48 +143,31 @@ export function SigningField({
       className={cn(
         'absolute z-10 flex cursor-pointer items-center justify-center gap-1.5 text-xs transition-all hover:shadow-md',
         `border ${fieldConfig.borderColor} ${fieldConfig.bgColor} ${fieldConfig.textColor}`,
-        value && 'border-green-500 bg-green-50'
+        value && 'border-green-500 bg-green-50',
+        // Highlight required empty fields
+        field.required && !value && 'ring-2 ring-yellow-400 ring-offset-1'
       )}
     >
-      {(() => {
-        switch (field.type.toLowerCase()) {
-          case 'checkbox':
-            return (
-              <div className='flex h-full w-full items-center justify-center'>
-                {value === 'true' || value === 'checked' ? (
-                  <Icons.checkSquare className='h-4 w-4' />
-                ) : (
-                  <Icons.square className='h-4 w-4' />
-                )}
-              </div>
-            );
-          case 'signature':
-          case 'stamp':
-            return value ? (
-              <img
-                src={value}
-                alt={field.type}
-                className='h-full w-full object-contain'
-              />
-            ) : (
-              <>
-                <FieldIcon className='h-3 w-3' />
-                <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
-                  Sign
-                </span>
-              </>
-            );
-          default:
-            return (
-              <>
-                <FieldIcon className='h-3 w-3' />
-                <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
-                  {value || field.label || field.type}
-                </span>
-              </>
-            );
-        }
-      })()}
+      {/* Required Indicator */}
+      {field.required && !value && (
+        <div className='absolute -top-2 -right-2 z-20'>
+          <span className='flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-black shadow-sm'>
+            *
+          </span>
+        </div>
+      )}
+
+      {/* Use config's renderDisplay if available, otherwise default rendering */}
+      {fieldConfig.renderDisplay ? (
+        fieldConfig.renderDisplay({ value, field, FieldIcon })
+      ) : (
+        <>
+          <FieldIcon className='h-3 w-3' />
+          <span className='pointer-events-none flex-1 truncate px-0.5 font-medium select-none'>
+            {value || field.label || fieldConfig.label}
+          </span>
+        </>
+      )}
     </div>
   );
 }

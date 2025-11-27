@@ -127,7 +127,7 @@ export async function POST(
                   width: field.width,
                   height: field.height,
                   required: field.required || false,
-                  value: field.value,
+                  // value is not set from editor - only from signing page
                   label: field.label,
                   recipientId: field.recipientId || null,
                   properties: fieldProperties
@@ -144,7 +144,7 @@ export async function POST(
                   y: field.y,
                   width: field.width,
                   height: field.height,
-                  value: field.value,
+                  // value is not updated from editor - only from signing page
                   required: field.required,
                   label: field.label,
                   recipientId: field.recipientId || null,

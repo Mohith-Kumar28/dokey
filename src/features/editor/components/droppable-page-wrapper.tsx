@@ -16,6 +16,7 @@ interface DroppablePageWrapperProps {
   readOnly?: boolean;
   fieldValues?: Record<string, string>;
   onFieldChange?: (fieldId: string, value: string) => void;
+  onSignatureClick?: (fieldId: string) => void;
 }
 
 export function DroppablePageWrapper({
@@ -28,7 +29,8 @@ export function DroppablePageWrapper({
   scale = 1,
   readOnly = false,
   fieldValues,
-  onFieldChange
+  onFieldChange,
+  onSignatureClick
 }: DroppablePageWrapperProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `page-${pageNumber}`,
@@ -64,6 +66,7 @@ export function DroppablePageWrapper({
             scale={scale}
             value={fieldValues?.[field.id]}
             onChange={(value) => onFieldChange?.(field.id, value)}
+            onInteract={() => onSignatureClick?.(field.id)}
           />
         ) : (
           <DraggableField

@@ -125,6 +125,7 @@ export function useSyncDocument(docId: string) {
       const res = await http.post(`/api/documents/${docId}/sync`, payload);
       return res.data;
     }
+    // Removed onSuccess query invalidation to prevent infinite refetch loop
   });
 }
 

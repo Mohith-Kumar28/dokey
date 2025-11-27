@@ -54,6 +54,10 @@ import {
   IconMinus,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarRightCollapse,
+  IconFile,
+  IconList,
+  IconShield,
+  IconCertificate,
   IconProps
 } from '@tabler/icons-react';
 
@@ -114,5 +118,9 @@ export const Icons = {
   select: IconSelector,
   circle: IconCircleDot,
   sidebarLeft: IconLayoutSidebarLeftCollapse,
-  sidebarRight: IconLayoutSidebarRightCollapse
+  sidebarRight: IconLayoutSidebarRightCollapse,
+  file: IconFile,
+  list: IconList,
+  shield: IconShield,
+  stamp: IconCertificate
 };
