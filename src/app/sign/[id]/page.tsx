@@ -468,11 +468,11 @@ export default function SignDocumentPage() {
                           Icons.file;
 
                         return (
-                          <button
+                          <div
                             key={field.id}
                             onClick={() => scrollToField(field.id)}
                             className={cn(
-                              'hover:border-primary/50 w-full rounded-lg border p-3 text-left transition-all hover:shadow-md',
+                              'hover:border-primary/50 w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:shadow-md',
                               field.isComplete && 'bg-primary/10 border-primary'
                             )}
                           >
@@ -523,7 +523,7 @@ export default function SignDocumentPage() {
                                 ) : null}
                               </div>
                             </div>
-                          </button>
+                          </div>
                         );
                       })
                     )}
