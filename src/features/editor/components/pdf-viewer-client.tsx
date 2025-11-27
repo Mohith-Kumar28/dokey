@@ -194,36 +194,40 @@ export function PDFViewerClient({
         <p className='text-muted-foreground text-sm'>
           {numPages} {numPages === 1 ? 'page' : 'pages'}
         </p>
-        <label htmlFor='pdf-replace'>
-          <Button
-            variant='outline'
-            size='sm'
-            disabled={uploadPDF.isPending}
-            asChild
-          >
-            <span>
-              {uploadPDF.isPending ? (
-                <>
-                  <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Icons.upload className='mr-2 h-4 w-4' />
-                  Replace PDF
-                </>
-              )}
-            </span>
-          </Button>
-        </label>
-        <input
-          id='pdf-replace'
-          type='file'
-          accept='application/pdf'
-          className='hidden'
-          onChange={handleFileInputChange}
-          disabled={uploadPDF.isPending}
-        />
+        {!readOnly && (
+          <>
+            <label htmlFor='pdf-replace'>
+              <Button
+                variant='outline'
+                size='sm'
+                disabled={uploadPDF.isPending}
+                asChild
+              >
+                <span>
+                  {uploadPDF.isPending ? (
+                    <>
+                      <Icons.spinner className='mr-2 h-4 w-4 animate-spin' />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Icons.upload className='mr-2 h-4 w-4' />
+                      Replace PDF
+                    </>
+                  )}
+                </span>
+              </Button>
+            </label>
+            <input
+              id='pdf-replace'
+              type='file'
+              accept='application/pdf'
+              className='hidden'
+              onChange={handleFileInputChange}
+              disabled={uploadPDF.isPending}
+            />
+          </>
+        )}
       </div>
 
       <Document

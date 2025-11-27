@@ -70,6 +70,7 @@ export default function SignDocumentPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showFieldList, setShowFieldList] = useState(true);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   const debouncedFieldValues = useDebounce(fieldValues, 1000);
 
@@ -105,7 +106,9 @@ export default function SignDocumentPage() {
             }
           });
         });
+
         setFieldValues(initialValues);
+
         if (foundSignature) {
           setAdoptedSignature(foundSignature);
         }
@@ -120,8 +123,9 @@ export default function SignDocumentPage() {
     fetchDocument();
   }, [documentId, recipientId]);
 
+  // Auto-save effect
   useEffect(() => {
-    if (!document || Object.keys(debouncedFieldValues).length === 0) return;
+    if (!documentId || !recipientId || !document || !isDirty) return;
 
     const saveProgress = async () => {
       setIsSaving(true);
@@ -130,6 +134,7 @@ export default function SignDocumentPage() {
           recipientId,
           fieldValues: debouncedFieldValues
         });
+        setIsDirty(false);
       } catch (error) {
         console.error('Auto-save failed:', error);
       } finally {
@@ -138,10 +143,11 @@ export default function SignDocumentPage() {
     };
 
     saveProgress();
-  }, [debouncedFieldValues, documentId, recipientId, document]);
+  }, [debouncedFieldValues, documentId, recipientId, document, isDirty]);
 
   const handleFieldChange = (fieldId: string, value: string) => {
     setFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+    setIsDirty(true);
   };
 
   const handleSignatureClick = (fieldId: string) => {
@@ -281,6 +287,7 @@ export default function SignDocumentPage() {
       setFieldValues({});
       setAdoptedSignature(null);
       setShowResetDialog(false);
+      setIsDirty(true); // Trigger auto-save to clear backend
       toast.success('All fields have been reset');
     } catch (error) {
       console.error('Failed to reset fields:', error);
@@ -294,6 +301,7 @@ export default function SignDocumentPage() {
       ...prev,
       [fieldId]: ''
     }));
+    setIsDirty(true); // Trigger auto-save
     toast.success('Field cleared');
   };
 
